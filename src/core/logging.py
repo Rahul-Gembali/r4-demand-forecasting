@@ -22,3 +22,4 @@ def setup_logger(name: str = "r4_forecast", level: str = "INFO") -> logging.Logg
 
 
 logger = setup_logger()
+get_logger = setup_logger

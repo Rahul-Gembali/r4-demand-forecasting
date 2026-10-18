@@ -76,3 +76,8 @@ yarn-error.log*
 
 # ML training logs and caches
 catboost_info/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
