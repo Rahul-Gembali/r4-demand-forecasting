@@ -60,6 +60,8 @@ data/processed/*
 !data/processed/README.md
 data/interim/*
 !data/interim/README.md
+data/uploads/*
+!data/uploads/.gitkeep
 
 # Model weights & training checkpoints
 artifacts/models/*

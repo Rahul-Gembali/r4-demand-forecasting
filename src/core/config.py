@@ -28,9 +28,17 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/r4_forecast_db",
-        description="Async PostgreSQL connection string",
+        default="sqlite+aiosqlite:///data/r4_forecast.db",
+        description="Database connection string (defaults to local SQLite; override with PostgreSQL in production)",
     )
+
+    # Authentication & Security
+    api_key_admin: str = Field(default="r4-admin-key-2026", description="Admin API Key")
+    api_key_operator: str = Field(default="r4-operator-key-2026", description="Operator API Key")
+    api_key_viewer: str = Field(default="r4-viewer-key-2026", description="Viewer Read-Only API Key")
+    auth_enabled: bool = Field(default=True, description="Enable API key verification")
+    max_upload_size_bytes: int = Field(default=52428800, description="Max upload file size in bytes (50MB)")
+    data_uploads_dir: Path = Field(default=Path("./data/uploads"), description="Uploads sandbox directory")
 
     # File System Storage Paths
     data_raw_dir: Path = Field(default=Path("./data/raw"), description="Raw data directory")
