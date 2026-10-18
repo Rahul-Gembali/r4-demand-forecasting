@@ -1,9 +1,756 @@
 {
   "directory_path": "data\\raw",
-  "total_files_scanned": 0,
-  "files_audited": [],
-  "summary_findings": {},
-  "blockers": [
-    "No valid dataset files (.csv, .parquet, .xlsx, .json) found in data\\raw."
-  ]
+  "total_files_scanned": 6,
+  "files_audited": [
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\hidden_evaluation_labels.csv",
+      "file_name": "hidden_evaluation_labels.csv",
+      "file_format": ".csv",
+      "file_size_mb": 0.0244,
+      "row_count": 1200,
+      "column_count": 3,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "sku_id",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 150,
+          "sample_values": [
+            "SKU_EVAL_001",
+            "SKU_EVAL_001",
+            "SKU_EVAL_001"
+          ],
+          "heuristic_tag": "sku_identifier"
+        },
+        {
+          "name": "horizon_week",
+          "dtype": "int64",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 8,
+          "sample_values": [
+            1,
+            2,
+            3
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "actual_sales",
+          "dtype": "float64",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 177,
+          "sample_values": [
+            76.0,
+            78.0,
+            68.0
+          ],
+          "heuristic_tag": "sales_target"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "sku_identifier": [
+            "sku_id"
+          ],
+          "temporal_dimension": [
+            "horizon_week"
+          ],
+          "sales_target": [
+            "actual_sales"
+          ]
+        },
+        "has_sku_column": true,
+        "has_target_column": true,
+        "has_temporal_column": true,
+        "has_cluster_column": false,
+        "actual_sales_zero_count": 0,
+        "actual_sales_negative_count": 0
+      }
+    },
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\historical_sales.csv",
+      "file_name": "historical_sales.csv",
+      "file_format": ".csv",
+      "file_size_mb": 1.9438,
+      "row_count": 43173,
+      "column_count": 5,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "sku_id",
+          "dtype": "str",
+          "non_null_count": 43173,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 1200,
+          "sample_values": [
+            "SKU_HIST_0001",
+            "SKU_HIST_0001",
+            "SKU_HIST_0001"
+          ],
+          "heuristic_tag": "sku_identifier"
+        },
+        {
+          "name": "store_id",
+          "dtype": "str",
+          "non_null_count": 43173,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 10,
+          "sample_values": [
+            "STORE_04",
+            "STORE_10",
+            "STORE_01"
+          ],
+          "heuristic_tag": "store_or_cluster"
+        },
+        {
+          "name": "week_start_date",
+          "dtype": "str",
+          "non_null_count": 43173,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 47,
+          "sample_values": [
+            "2024-01-08",
+            "2024-01-08",
+            "2024-01-08"
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "units_sold",
+          "dtype": "float64",
+          "non_null_count": 43173,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 97,
+          "sample_values": [
+            0.0,
+            0.0,
+            35.0
+          ],
+          "heuristic_tag": "sales_target"
+        },
+        {
+          "name": "revenue",
+          "dtype": "float64",
+          "non_null_count": 43173,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 22329,
+          "sample_values": [
+            0.0,
+            0.0,
+            2753.8
+          ],
+          "heuristic_tag": "numerical_feature"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "sku_identifier": [
+            "sku_id"
+          ],
+          "store_or_cluster": [
+            "store_id"
+          ],
+          "temporal_dimension": [
+            "week_start_date"
+          ],
+          "sales_target": [
+            "units_sold"
+          ],
+          "numerical_feature": [
+            "revenue"
+          ]
+        },
+        "has_sku_column": true,
+        "has_target_column": true,
+        "has_temporal_column": true,
+        "has_cluster_column": true,
+        "units_sold_zero_count": 3362,
+        "units_sold_negative_count": 0
+      }
+    },
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\holiday_calendar.csv",
+      "file_name": "holiday_calendar.csv",
+      "file_format": ".csv",
+      "file_size_mb": 0.0042,
+      "row_count": 156,
+      "column_count": 5,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "week_start_date",
+          "dtype": "str",
+          "non_null_count": 156,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 156,
+          "sample_values": [
+            "2024-01-01",
+            "2024-01-08",
+            "2024-01-15"
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "fiscal_year",
+          "dtype": "int64",
+          "non_null_count": 156,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 3,
+          "sample_values": [
+            2024,
+            2024,
+            2024
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "fiscal_week",
+          "dtype": "int64",
+          "non_null_count": 156,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 52,
+          "sample_values": [
+            1,
+            2,
+            3
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "is_holiday_week",
+          "dtype": "int64",
+          "non_null_count": 156,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 2,
+          "sample_values": [
+            1,
+            0,
+            0
+          ],
+          "heuristic_tag": "holiday_or_event"
+        },
+        {
+          "name": "holiday_name",
+          "dtype": "str",
+          "non_null_count": 18,
+          "null_count": 138,
+          "null_percentage": 88.46,
+          "distinct_count": 6,
+          "sample_values": [
+            "New Year",
+            "Good Friday",
+            "Independence Day"
+          ],
+          "heuristic_tag": "holiday_or_event"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "temporal_dimension": [
+            "week_start_date",
+            "fiscal_year",
+            "fiscal_week"
+          ],
+          "holiday_or_event": [
+            "is_holiday_week",
+            "holiday_name"
+          ]
+        },
+        "has_sku_column": false,
+        "has_target_column": false,
+        "has_temporal_column": true,
+        "has_cluster_column": false
+      }
+    },
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\mature_sku_attributes.csv",
+      "file_name": "mature_sku_attributes.csv",
+      "file_format": ".csv",
+      "file_size_mb": 0.1446,
+      "row_count": 1200,
+      "column_count": 11,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "sku_id",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 1200,
+          "sample_values": [
+            "SKU_HIST_0001",
+            "SKU_HIST_0002",
+            "SKU_HIST_0003"
+          ],
+          "heuristic_tag": "sku_identifier"
+        },
+        {
+          "name": "product_name",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 40,
+          "sample_values": [
+            "Horizon Basics Footwear Sneakers White",
+            "ValueCraft Accessories Belts Navy",
+            "Luxura Home Lighting Grey"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "category",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 4,
+          "sample_values": [
+            "Footwear",
+            "Accessories",
+            "Home"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "subcategory",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 8,
+          "sample_values": [
+            "Sneakers",
+            "Belts",
+            "Lighting"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "colour",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 8,
+          "sample_values": [
+            "White",
+            "Navy",
+            "Grey"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "material",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 7,
+          "sample_values": [
+            "Polyester",
+            "Wool",
+            "Leather"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "base_price",
+          "dtype": "float64",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 1162,
+          "sample_values": [
+            78.68,
+            169.75,
+            26.66
+          ],
+          "heuristic_tag": "financial_attribute"
+        },
+        {
+          "name": "brand",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 5,
+          "sample_values": [
+            "Horizon Basics",
+            "ValueCraft",
+            "Luxura"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "brand_tier",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 3,
+          "sample_values": [
+            "Tier 2 Regional",
+            "Tier 3 Value",
+            "Tier 1 National"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "launch_date",
+          "dtype": "str",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 40,
+          "sample_values": [
+            "2024-01-08",
+            "2024-01-15",
+            "2024-01-22"
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "has_marketing_support",
+          "dtype": "bool",
+          "non_null_count": 1200,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 2,
+          "sample_values": [
+            true,
+            true,
+            false
+          ],
+          "heuristic_tag": "categorical_feature"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "sku_identifier": [
+            "sku_id"
+          ],
+          "categorical_feature": [
+            "product_name",
+            "colour",
+            "material",
+            "has_marketing_support"
+          ],
+          "category_attribute": [
+            "category",
+            "subcategory",
+            "brand",
+            "brand_tier"
+          ],
+          "financial_attribute": [
+            "base_price"
+          ],
+          "temporal_dimension": [
+            "launch_date"
+          ]
+        },
+        "has_sku_column": true,
+        "has_target_column": false,
+        "has_temporal_column": true,
+        "has_cluster_column": false
+      }
+    },
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\new_sku_attributes.csv",
+      "file_name": "new_sku_attributes.csv",
+      "file_format": ".csv",
+      "file_size_mb": 0.0174,
+      "row_count": 150,
+      "column_count": 11,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "sku_id",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 150,
+          "sample_values": [
+            "SKU_EVAL_001",
+            "SKU_EVAL_002",
+            "SKU_EVAL_003"
+          ],
+          "heuristic_tag": "sku_identifier"
+        },
+        {
+          "name": "product_name",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 40,
+          "sample_values": [
+            "ValueCraft New Sneakers Grey",
+            "Luxura New Belts Red",
+            "UrbanThread New Lighting Olive"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "category",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 4,
+          "sample_values": [
+            "Footwear",
+            "Accessories",
+            "Home"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "subcategory",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 8,
+          "sample_values": [
+            "Sneakers",
+            "Belts",
+            "Lighting"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "colour",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 8,
+          "sample_values": [
+            "Grey",
+            "Red",
+            "Olive"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "material",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 7,
+          "sample_values": [
+            "Denim",
+            "Linen",
+            "Synthetic"
+          ],
+          "heuristic_tag": "categorical_feature"
+        },
+        {
+          "name": "base_price",
+          "dtype": "float64",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 150,
+          "sample_values": [
+            104.6,
+            165.34,
+            141.81
+          ],
+          "heuristic_tag": "financial_attribute"
+        },
+        {
+          "name": "brand",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 5,
+          "sample_values": [
+            "ValueCraft",
+            "Luxura",
+            "UrbanThread"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "brand_tier",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 3,
+          "sample_values": [
+            "Tier 3 Value",
+            "Tier 1 National",
+            "Tier 2 Regional"
+          ],
+          "heuristic_tag": "category_attribute"
+        },
+        {
+          "name": "launch_date",
+          "dtype": "str",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 1,
+          "sample_values": [
+            "2025-11-03",
+            "2025-11-03",
+            "2025-11-03"
+          ],
+          "heuristic_tag": "temporal_dimension"
+        },
+        {
+          "name": "has_marketing_support",
+          "dtype": "bool",
+          "non_null_count": 150,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 2,
+          "sample_values": [
+            false,
+            true,
+            false
+          ],
+          "heuristic_tag": "categorical_feature"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "sku_identifier": [
+            "sku_id"
+          ],
+          "categorical_feature": [
+            "product_name",
+            "colour",
+            "material",
+            "has_marketing_support"
+          ],
+          "category_attribute": [
+            "category",
+            "subcategory",
+            "brand",
+            "brand_tier"
+          ],
+          "financial_attribute": [
+            "base_price"
+          ],
+          "temporal_dimension": [
+            "launch_date"
+          ]
+        },
+        "has_sku_column": true,
+        "has_target_column": false,
+        "has_temporal_column": true,
+        "has_cluster_column": false
+      }
+    },
+    {
+      "file_path": "E:\\r4-demand-forecasting\\data\\raw\\store_clusters.csv",
+      "file_name": "store_clusters.csv",
+      "file_format": ".csv",
+      "file_size_mb": 0.0004,
+      "row_count": 10,
+      "column_count": 4,
+      "duplicate_rows": 0,
+      "columns": [
+        {
+          "name": "store_id",
+          "dtype": "str",
+          "non_null_count": 10,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 10,
+          "sample_values": [
+            "STORE_01",
+            "STORE_02",
+            "STORE_03"
+          ],
+          "heuristic_tag": "store_or_cluster"
+        },
+        {
+          "name": "cluster_id",
+          "dtype": "str",
+          "non_null_count": 10,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 3,
+          "sample_values": [
+            "CLUSTER_2",
+            "CLUSTER_3",
+            "CLUSTER_1"
+          ],
+          "heuristic_tag": "store_or_cluster"
+        },
+        {
+          "name": "region",
+          "dtype": "str",
+          "non_null_count": 10,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 4,
+          "sample_values": [
+            "South",
+            "East",
+            "West"
+          ],
+          "heuristic_tag": "store_or_cluster"
+        },
+        {
+          "name": "store_tier",
+          "dtype": "str",
+          "non_null_count": 10,
+          "null_count": 0,
+          "null_percentage": 0.0,
+          "distinct_count": 3,
+          "sample_values": [
+            "Regional",
+            "Express",
+            "Flagship"
+          ],
+          "heuristic_tag": "store_or_cluster"
+        }
+      ],
+      "heuristic_findings": {
+        "tagged_columns": {
+          "store_or_cluster": [
+            "store_id",
+            "cluster_id",
+            "region",
+            "store_tier"
+          ]
+        },
+        "has_sku_column": false,
+        "has_target_column": false,
+        "has_temporal_column": false,
+        "has_cluster_column": true
+      }
+    }
+  ],
+  "summary_findings": {
+    "total_files": 6,
+    "total_rows": 45889
+  },
+  "blockers": []
 }

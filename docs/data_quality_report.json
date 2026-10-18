@@ -1,0 +1,50 @@
+{
+  "audit_timestamp": "2026-10-18T12:59:32.542561+00:00",
+  "overall_status": "PASSED",
+  "checks": [
+    {
+      "check_name": "target_sku_count_alignment",
+      "status": "PASSED",
+      "message": "Inference set contains 150 target SKUs (Expected 150)",
+      "metric_value": 150,
+      "threshold": 150
+    },
+    {
+      "check_name": "target_evaluation_isolation_leakage",
+      "status": "PASSED",
+      "message": "0 evaluation SKUs found in training set (Strict zero overlap required)",
+      "metric_value": 0,
+      "threshold": 0
+    },
+    {
+      "check_name": "hidden_evaluation_labels_protection",
+      "status": "PASSED",
+      "message": "Inference features target exposure: 0 values present (MUST BE NULL)",
+      "metric_value": 0,
+      "threshold": 0
+    },
+    {
+      "check_name": "launch_week_age_alignment",
+      "status": "PASSED",
+      "message": "Launch week age range: [1, 2, 3, 4, 5, 6, 7, 8] (Expected [1, 2, 3, 4, 5, 6, 7, 8])",
+      "metric_value": "[1, 2, 3, 4, 5, 6, 7, 8]",
+      "threshold": "[1, 2, 3, 4, 5, 6, 7, 8]"
+    },
+    {
+      "check_name": "marketing_flag_business_rule_validation",
+      "status": "PASSED",
+      "message": "Marketing intensity: Weeks 1-4 avg=0.67, Weeks 5-8 avg=0.00",
+      "metric_value": 0.666,
+      "threshold": 0.0
+    }
+  ],
+  "dataset_metrics": {
+    "train_rows": 43173,
+    "train_skus": 1200,
+    "inference_rows": 1200,
+    "inference_skus": 150
+  },
+  "stockout_availability_note": "Stockout information (days_in_stock / stockout_flag) was audited. Where not present in source transactional feeds, the pipeline explicitly preserves unobserved status and DOES NOT fabricate synthetic stockout censors.",
+  "leakage_check_passed": true,
+  "blockers": []
+}
