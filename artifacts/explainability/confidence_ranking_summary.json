@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-10-18T13:42:14.923235+00:00",
+  "total_skus": 150,
+  "mean_confidence_score": 77.51,
+  "median_confidence_score": 82.87,
+  "tier_counts": {
+    "HIGH": 110,
+    "LOW": 24,
+    "MEDIUM": 16
+  },
+  "weights": {
+    "interval_spread": 0.3,
+    "analogue_quality": 0.25,
+    "model_consensus": 0.2,
+    "category_track_record": 0.15,
+    "attribute_typicality": 0.1
+  },
+  "least_confident_10_skus": [
+    "SKU_EVAL_120",
+    "SKU_EVAL_096",
+    "SKU_EVAL_072",
+    "SKU_EVAL_092",
+    "SKU_EVAL_052",
+    "SKU_EVAL_116",
+    "SKU_EVAL_012",
+    "SKU_EVAL_016",
+    "SKU_EVAL_132",
+    "SKU_EVAL_136"
+  ]
+}
