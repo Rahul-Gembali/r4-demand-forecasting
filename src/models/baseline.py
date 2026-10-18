@@ -1,15 +1,15 @@
 """Category-level and hierarchical launch curve baseline models."""
 
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from dataclasses import dataclass
+from enum import StrEnum
+
 import numpy as np
 import pandas as pd
 
 from src.core.logging import logger
 
 
-class FallbackLevel(str, Enum):
+class FallbackLevel(StrEnum):
     CATEGORY_SUBCATEGORY = "CATEGORY_SUBCATEGORY"
     CATEGORY = "CATEGORY"
     GLOBAL = "GLOBAL"

@@ -1,6 +1,5 @@
 """Inventory Optimization and Newsvendor Buy Quantity Endpoints."""
 
-from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +11,7 @@ from src.api.schemas import (
     InventoryOptimizeResponse,
 )
 from src.core.logging import get_logger
-from src.db.models import ForecastRunModel, InventoryRecommendationModel
+from src.db.models import InventoryRecommendationModel
 from src.db.repository import ForecastRepository
 from src.db.session import get_db_session
 from src.inventory.constraints import InventoryConstraints

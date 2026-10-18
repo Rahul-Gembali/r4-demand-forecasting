@@ -1,12 +1,11 @@
 """Unit tests for Phase 5 Uncertainty Estimation and Official Evaluation."""
 
-import math
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from src.evaluation.metrics import wape
 from src.evaluation.official_evaluator import OfficialEvaluationReport, OfficialEvaluator
 from src.evaluation.uncertainty import (
     ConformalIntervalCalibrator,
@@ -14,7 +13,6 @@ from src.evaluation.uncertainty import (
     mean_interval_width,
     winkler_score,
 )
-from src.models.supervised import ColdStartPredictor, SKUWeeklyForecast
 
 
 def test_empirical_coverage_and_width_calculation():

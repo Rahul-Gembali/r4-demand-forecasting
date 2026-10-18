@@ -1,13 +1,14 @@
 """Unit tests for Phase 7 Forecast Explanations and Confidence Ranking."""
 
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
-from src.explainability.confidence import ConfidenceScorer, SKUConfidenceMetrics
+from src.explainability.confidence import ConfidenceScorer
 from src.explainability.shap_engine import SKUFeatureContribution, TreeShapEngine
-from src.explainability.synthesizer import CompleteSKUExplanation, ExplanationSynthesizer
+from src.explainability.synthesizer import ExplanationSynthesizer
 from src.models.supervised import ColdStartPredictor
 
 
@@ -131,15 +132,6 @@ def test_narrow_vs_wide_interval_impact():
 
 def test_analogue_distance_impact():
     scorer = ConfidenceScorer()
-    args = {
-        "sku_id": "TEST_ANA",
-        "category": "Home",
-        "base_price": 80.0,
-        "point_forecast_cumul": 300.0,
-        "lower_bound_90_cumul=240.0": 240.0,
-        "upper_bound_90_cumul=360.0": 360.0,
-        "analogue_forecast_cumul": 300.0,
-    }
 
     res_close = scorer.score_sku(
         sku_id="TEST_ANA_1",

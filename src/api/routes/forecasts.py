@@ -1,15 +1,14 @@
 """Forecasting and Prediction Endpoints."""
 
-import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-import numpy as np
+
 import pandas as pd
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.auth import AuthenticatedUser, require_operator, require_viewer
@@ -25,7 +24,10 @@ from src.api.schemas import (
     SKUForecastListResponse,
 )
 from src.core.logging import get_logger
-from src.db.models import ForecastRunModel, InventoryRecommendationModel, ModelVersionModel, SKUModel
+from src.db.models import (
+    ModelVersionModel,
+    SKUModel,
+)
 from src.db.repository import DuplicateRunError, ForecastRepository
 from src.db.session import async_session_scope, get_db_session
 
@@ -91,13 +93,11 @@ async def execute_forecast_batch(
 
     # 5. Load precalculated reference outputs if available, otherwise compute dynamically
     intervals_path = Path("data/processed/forecasts_with_intervals_150_skus.csv")
-    rec_path = Path("data/processed/inventory_buy_recommendations_150_skus.csv")
-    analogues_path = Path("data/processed/analogue_retrieval_records.json")
     explanations_path = Path("data/processed/forecast_explanations_150_skus.json")
 
     explanations_map = {}
     if explanations_path.exists():
-        with open(explanations_path, "r", encoding="utf-8") as f:
+        with open(explanations_path, encoding="utf-8") as f:
             for exp in json.load(f):
                 explanations_map[exp["sku_id"]] = exp
 
@@ -107,9 +107,8 @@ async def execute_forecast_batch(
 
     # Map processed data by SKU ID
     df_fc = pd.read_csv(intervals_path) if intervals_path.exists() else pd.DataFrame()
-    df_rec = pd.read_csv(rec_path) if rec_path.exists() else pd.DataFrame()
 
-    for idx, sku in enumerate(skus):
+    for sku in skus:
         # Weekly forecasts
         if not df_fc.empty and "sku_id" in df_fc.columns and sku.sku_id in df_fc["sku_id"].values:
             sku_fc = df_fc[df_fc["sku_id"] == sku.sku_id]
@@ -194,7 +193,7 @@ async def execute_forecast_batch(
     await repo.update_forecast_run_status(
         run_id=run_id,
         status="COMPLETED",
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(UTC),
         overall_wape=0.2561,
         overall_bias_pct=-3.76,
     )

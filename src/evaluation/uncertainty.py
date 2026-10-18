@@ -5,23 +5,19 @@ weekly and cumulative 8-week prediction intervals, empirical coverage metrics,
 Winkler score, and serialization for production inference.
 """
 
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import math
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
 import numpy as np
 import pandas as pd
 
 from src.core.logging import logger
 from src.evaluation.metrics import (
-    ensure_numpy_arrays,
-    forecast_bias_pct,
-    mae,
     pinball_loss,
-    rmse,
-    wape,
 )
 
 
@@ -170,7 +166,7 @@ class ConformalIntervalCalibrator:
             )
 
         self.calibration_metadata = {
-            "calibrated_at": datetime.now(timezone.utc).isoformat(),
+            "calibrated_at": datetime.now(UTC).isoformat(),
             "n_weekly_calibration_points": n_weekly,
             "n_skus_calibration": n_cum,
             "min_spread_epsilon": self.min_spread_epsilon,

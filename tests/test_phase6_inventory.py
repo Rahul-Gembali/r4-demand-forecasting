@@ -1,11 +1,10 @@
 """Unit tests for Phase 6 Initial Inventory and Buy Quantity Optimization."""
 
 import pytest
-import numpy as np
 
 from src.inventory.constraints import InventoryConstraints
-from src.inventory.cost_model import CostModel, CostScenario, SKUCostParameters
-from src.inventory.optimizer import BuyRecommendation, NewsvendorOptimizer
+from src.inventory.cost_model import CostModel, CostScenario
+from src.inventory.optimizer import NewsvendorOptimizer
 
 
 def test_zero_demand_handling():

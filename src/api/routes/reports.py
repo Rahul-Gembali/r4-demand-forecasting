@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.auth import AuthenticatedUser, require_viewer
 from src.api.schemas import ReportSummaryResponse
 from src.core.logging import get_logger
-from src.db.models import DataManifestModel, ForecastRunModel
+from src.db.models import DataManifestModel
 from src.db.repository import ForecastRepository
 from src.db.session import get_db_session
 
@@ -52,7 +52,7 @@ async def get_run_report(
     }
     if official_eval_path.exists():
         try:
-            with open(official_eval_path, "r", encoding="utf-8") as f:
+            with open(official_eval_path, encoding="utf-8") as f:
                 eval_json = json.load(f)
                 if "uncertainty_calibration" in eval_json:
                     calibration_data.update(eval_json["uncertainty_calibration"])

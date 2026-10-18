@@ -6,7 +6,6 @@ import pytest
 
 from src.evaluation.evaluator import ColdStartEvaluator
 from src.evaluation.metrics import (
-    calculate_metrics_summary,
     forecast_bias_pct,
     mae,
     pinball_loss,

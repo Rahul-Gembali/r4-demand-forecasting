@@ -1,9 +1,9 @@
 """Pydantic V2 Request and Response Schemas for R4 Forecasting API."""
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
-from pydantic import BaseModel, Field, field_validator
 
+from pydantic import BaseModel, Field, field_validator
 
 # =============================================================================
 # SYSTEM HEALTH & READINESS SCHEMAS

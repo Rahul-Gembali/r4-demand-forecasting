@@ -4,24 +4,24 @@ Implements leakage-safe SKU-level dataset building, objective comparison,
 hyperparameter tuning, model serialization, and unified prediction interface.
 """
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+import hashlib
 import json
 import math
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
+
 import catboost as cb
 import numpy as np
 import pandas as pd
 
 from src.core.logging import logger
-from src.evaluation.metrics import (
-    calculate_metrics_summary,
-    forecast_bias_pct,
-    mae,
-    rmse,
-    wape,
-)
+
+
+class ModelIntegrityError(Exception):
+    """Raised when model artifact integrity verification fails (e.g. SHA-256 mismatch)."""
+    pass
 
 
 @dataclass
@@ -326,6 +326,9 @@ class CatBoostForecaster:
         model_path = artifact_dir / "catboost_model.cbm"
         self.model.save_model(str(model_path))
 
+        # Cryptographic integrity checksum of serialized weights
+        sha256_digest = hashlib.sha256(model_path.read_bytes()).hexdigest()
+
         best_iter = None
         if hasattr(self.model, "get_best_iteration"):
             try:
@@ -346,7 +349,8 @@ class CatBoostForecaster:
             "categorical_columns": self.categorical_columns,
             "best_iteration": best_iter,
             "model_version": "v1.0.0-catboost-coldstart",
-            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "sha256_checksum": sha256_digest,
+            "saved_at": datetime.now(UTC).isoformat(),
         }
         with open(artifact_dir / "model_config.json", "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2)
@@ -366,13 +370,31 @@ class CatBoostForecaster:
         with open(artifact_dir / "feature_schema.json", "w", encoding="utf-8") as f:
             json.dump(feature_schema, f, indent=2)
 
-        logger.info("Saved complete model artifact to: %s", artifact_dir)
+        logger.info("Saved complete model artifact [SHA256: %s] to: %s", sha256_digest[:12], artifact_dir)
 
     @classmethod
-    def load_artifact(cls, artifact_dir: Path) -> "CatBoostForecaster":
-        """Loads serialized model artifact from directory."""
-        with open(artifact_dir / "model_config.json", encoding="utf-8") as f:
+    def load_artifact(cls, artifact_dir: Path, verify_integrity: bool = True) -> "CatBoostForecaster":
+        """Loads serialized model artifact from directory with cryptographic integrity verification."""
+        config_path = artifact_dir / "model_config.json"
+        if not config_path.exists():
+            raise FileNotFoundError(f"Model configuration file missing: {config_path}")
+
+        with open(config_path, encoding="utf-8") as f:
             config = json.load(f)
+
+        model_weights_path = artifact_dir / "catboost_model.cbm"
+        if not model_weights_path.exists():
+            raise FileNotFoundError(f"Model weights file missing: {model_weights_path}")
+
+        # Cryptographic artifact integrity check
+        if verify_integrity and "sha256_checksum" in config:
+            expected_sha = config["sha256_checksum"]
+            actual_sha = hashlib.sha256(model_weights_path.read_bytes()).hexdigest()
+            if actual_sha != expected_sha:
+                raise ModelIntegrityError(
+                    f"Model artifact '{model_weights_path}' failed cryptographic integrity verification. "
+                    f"Expected SHA256: {expected_sha}, got: {actual_sha}. Artifact is corrupted or tampered."
+                )
 
         instance = cls(
             objective=config["objective"],
@@ -384,7 +406,7 @@ class CatBoostForecaster:
             random_seed=config["random_seed"],
         )
         instance.model = cb.CatBoostRegressor()
-        instance.model.load_model(str(artifact_dir / "catboost_model.cbm"))
+        instance.model.load_model(str(model_weights_path))
         instance.feature_columns = config["feature_columns"]
         instance.categorical_columns = config["categorical_columns"]
         instance.is_fitted = True
@@ -542,10 +564,10 @@ class ColdStartPredictor:
             cl80, cu80 = self.calibrator.predict_cumulative_intervals(unique_cums, confidence_level=0.80)
             cl90, cu90 = self.calibrator.predict_cumulative_intervals(unique_cums, confidence_level=0.90)
 
-            map_cl80 = dict(zip(unique_skus, cl80))
-            map_cu80 = dict(zip(unique_skus, cu80))
-            map_cl90 = dict(zip(unique_skus, cl90))
-            map_cu90 = dict(zip(unique_skus, cu90))
+            map_cl80 = dict(zip(unique_skus, cl80, strict=False))
+            map_cu80 = dict(zip(unique_skus, cu80, strict=False))
+            map_cl90 = dict(zip(unique_skus, cl90, strict=False))
+            map_cu90 = dict(zip(unique_skus, cu90, strict=False))
 
             df_out["cumul_lower_80"] = df_out["sku_id"].map(map_cl80)
             df_out["cumul_upper_80"] = df_out["sku_id"].map(map_cu80)

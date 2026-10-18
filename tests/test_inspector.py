@@ -1,9 +1,8 @@
 """Unit tests for DataInspector schema discovery and anomaly auditing."""
 
 from pathlib import Path
-import numpy as np
+
 import pandas as pd
-import pytest
 
 from src.data.inspector import DataInspector
 

@@ -2,13 +2,13 @@
 
 from datetime import date
 from pathlib import Path
-import numpy as np
+
 import pandas as pd
 import pytest
 
 from src.data.pipeline import DataPipeline
-from src.data.quality import DataQualityAuditor, DataQualityConfig
-from src.data.schema import ObservationStatus, PriceBand
+from src.data.quality import DataQualityAuditor
+from src.data.schema import PriceBand
 
 
 @pytest.fixture

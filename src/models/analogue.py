@@ -1,8 +1,8 @@
 """Analogue Retrieval and Similarity-Weighted Cold-Start Forecasting Engine."""
 
-from dataclasses import asdict, dataclass, field
-import math
+from dataclasses import asdict, dataclass
 from typing import Any
+
 import numpy as np
 import pandas as pd
 

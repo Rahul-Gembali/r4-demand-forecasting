@@ -5,12 +5,11 @@ distinguishes positive vs negative drivers, and computes cumulative 8-week impac
 """
 
 from dataclasses import dataclass
-from typing import Any
+
 import catboost as cb
 import numpy as np
 import pandas as pd
 
-from src.core.logging import logger
 from src.models.supervised import CatBoostForecaster
 
 

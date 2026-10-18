@@ -1,7 +1,8 @@
 """Health check and readiness verification endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -21,7 +22,7 @@ async def check_health() -> HealthResponse:
         status="healthy",
         service="r4-demand-forecasting",
         version="0.1.0",
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -68,6 +69,6 @@ async def check_readiness(session: AsyncSession = Depends(get_db_session)) -> JS
     payload = {
         "ready": is_ready,
         "components": {k: v.model_dump() for k, v in components.items()},
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
     return JSONResponse(status_code=status_code, content=payload)

@@ -4,15 +4,13 @@ Implements single-period critical ratio optimization, expected cost calculation,
 parametric and conformal quantile inversion, integer constraints, and sensitivity analysis.
 """
 
-from dataclasses import asdict, dataclass, field
-import math
+from dataclasses import dataclass
 from typing import Any, Literal
-import numpy as np
+
 import scipy.stats as stats
 
-from src.core.logging import logger
 from src.inventory.constraints import InventoryConstraints
-from src.inventory.cost_model import CostModel, CostScenario, SKUCostParameters
+from src.inventory.cost_model import CostModel, CostScenario
 
 
 @dataclass

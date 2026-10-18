@@ -1,6 +1,7 @@
 """Configuration settings for R4 Demand Forecasting."""
 
 from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -59,6 +60,22 @@ class Settings(BaseSettings):
         default=1200, description="Reference historical SKU count"
     )
     random_seed: int = Field(default=42, description="Global random seed")
+
+    def validate_production_security(self) -> list[str]:
+        """Audit configuration for production security and reliability standards."""
+        warnings: list[str] = []
+        if self.environment.lower() == "production":
+            if self.secret_key == "dev-secret-key":
+                warnings.append("SECURITY CRITICAL: Default 'dev-secret-key' in production. Set SECRET_KEY.")
+            if self.api_key_admin == "r4-admin-key-2026":
+                warnings.append("SECURITY CRITICAL: Default admin API key in production. Set API_KEY_ADMIN.")
+            if "localhost" in self.allowed_origins:
+                warnings.append("SECURITY WARNING: Localhost origins in production CORS settings. Review ALLOWED_ORIGINS.")
+            if "sqlite" in self.database_url:
+                warnings.append("RELIABILITY WARNING: SQLite in production environment. Configure PostgreSQL.")
+            elif "postgresql" in self.database_url and "sslmode=require" not in self.database_url and "ssl=true" not in self.database_url:
+                warnings.append("SECURITY WARNING: PostgreSQL connection missing sslmode=require for TLS encryption.")
+        return warnings
 
 
 settings = Settings()

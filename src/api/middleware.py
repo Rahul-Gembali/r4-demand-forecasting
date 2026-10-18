@@ -3,12 +3,14 @@
 import time
 import uuid
 from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.core.logging import get_logger
+from src.core.monitoring import telemetry
 from src.db.repository import DuplicateRunError
 
 logger = get_logger("api_middleware")
@@ -29,6 +31,14 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
         # Attach correlation ID to response headers
         response.headers["X-Request-ID"] = req_id
         response.headers["X-Response-Time-MS"] = str(duration_ms)
+
+        # Record telemetry metrics
+        telemetry.record_request(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+        )
 
         logger.info(
             f"[{req_id}] {request.method} {request.url.path} -> "
@@ -61,7 +71,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         req_id = getattr(request.state, "request_id", None)
         errors = []
         for err in exc.errors():
-            loc = " -> ".join(str(l) for l in err.get("loc", []))
+            loc = " -> ".join(str(part) for part in err.get("loc", []))
             errors.append({"field": loc, "issue": err.get("msg")})
 
         return JSONResponse(

@@ -1,7 +1,8 @@
 """Authentication and Role-Based Access Control (RBAC) for R4 API."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
+
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -9,7 +10,7 @@ from pydantic import BaseModel
 from src.core.config import settings
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """System authorization roles."""
     ADMIN = "admin"
     OPERATOR = "operator"

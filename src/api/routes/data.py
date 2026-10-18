@@ -5,8 +5,9 @@ import os
 import re
 from pathlib import Path
 from typing import Annotated
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+
 import pandas as pd
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.auth import AuthenticatedUser, require_operator
@@ -110,7 +111,7 @@ async def import_data(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to parse uploaded {file_ext} file: {str(exc)}",
-        )
+        ) from exc
 
     warnings: list[str] = []
     rows_parsed = len(df)

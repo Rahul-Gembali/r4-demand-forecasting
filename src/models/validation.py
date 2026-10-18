@@ -1,10 +1,9 @@
 """Validation harness benchmarking baseline and analogue models on held-out historical launches."""
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-import json
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -163,7 +162,7 @@ class ColdStartValidator:
 
         val_ratio_pct = (len(val_sku_set) / max(1, len(df_mature_attr))) * 100.0
         report = Phase3BenchmarkReport(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             total_historical_skus=len(df_mature_attr),
             train_donor_skus=len(donor_sku_set),
             held_out_validation_skus=len(val_sku_set),
@@ -183,7 +182,7 @@ class ColdStartValidator:
             "",
             f"**Evaluation Date:** `{report.timestamp}`  ",
             f"**Validation Cohort:** `{report.held_out_validation_skus}` held-out SKUs ({report.split_ratio})  ",
-            f"**Evaluation Target:** Enterprise sales across Launch Weeks $W_1$ through $W_8$  ",
+            "**Evaluation Target:** Enterprise sales across Launch Weeks $W_1$ through $W_8$  ",
             "",
             "## 1. Model Comparison Summary (Offline Held-Out Launches)",
             "",

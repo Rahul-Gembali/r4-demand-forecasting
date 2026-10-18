@@ -1,13 +1,11 @@
 """Cold-start demand forecast evaluation runner."""
 
-from typing import Any
 import pandas as pd
 from pydantic import BaseModel, Field
 
 from src.evaluation.metrics import (
     forecast_bias_pct,
     mae,
-    pinball_loss,
     rmse,
     wape,
 )

@@ -9,10 +9,10 @@ Provides asynchronous, transactional data access for:
 - Lineage manifests and confidence ranking queries
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from sqlalchemy import delete, func, select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -219,7 +219,7 @@ class ForecastRepository:
         if completed_at is not None:
             run.completed_at = completed_at
         elif status == "COMPLETED" and run.completed_at is None:
-            run.completed_at = datetime.now(timezone.utc)
+            run.completed_at = datetime.now(UTC)
 
         if overall_wape is not None:
             run.overall_wape = overall_wape
@@ -424,7 +424,10 @@ class ForecastRepository:
                 InventoryRecommendationModel.run_id == run_id,
                 InventoryRecommendationModel.sku_id == sku_id,
             )
-            .order_by(InventoryRecommendationModel.created_at.desc())
+            .order_by(
+                InventoryRecommendationModel.created_at.desc(),
+                InventoryRecommendationModel.id.desc(),
+            )
             .limit(1)
         )
         rec = (await self.session.execute(rec_stmt)).scalars().first()
@@ -635,7 +638,10 @@ class ForecastRepository:
                     InventoryRecommendationModel.run_id == run_id,
                     InventoryRecommendationModel.sku_id == sku.sku_id,
                 )
-                .order_by(InventoryRecommendationModel.created_at.desc())
+                .order_by(
+                    InventoryRecommendationModel.created_at.desc(),
+                    InventoryRecommendationModel.id.desc(),
+                )
                 .limit(1)
             )
             rec = (await self.session.execute(rec_stmt)).scalars().first()

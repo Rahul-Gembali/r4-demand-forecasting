@@ -1,6 +1,5 @@
 """Forecasting API routes for cold-start SKUs."""
 
-from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 

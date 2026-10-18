@@ -1,16 +1,16 @@
 """Comprehensive integration tests for Phase 9: FastAPI Backend Endpoints."""
 
 import asyncio
-from datetime import date, datetime, timezone
 import io
+from datetime import UTC, date, datetime
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.api.main import app
 from src.core.config import settings
-from src.db.models import Base
 from src.db.repository import ForecastRepository
 from src.db.session import create_async_db_engine, get_db_session, init_db_schema
 
@@ -81,7 +81,7 @@ def api_client(tmp_path: Path):
                     "sku_count": 2,
                     "overall_wape": 0.2561,
                     "overall_bias_pct": -3.76,
-                    "completed_at": datetime.now(timezone.utc),
+                    "completed_at": datetime.now(UTC),
                 }
             )
 

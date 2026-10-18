@@ -14,7 +14,9 @@ Covers:
 - Cryptographic data lineage manifests
 """
 
-from datetime import date, datetime, timezone
+from datetime import date
+from pathlib import Path
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import func, select
@@ -23,22 +25,15 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from src.db.models import (
     Base,
-    ClusterAllocationModel,
-    DataManifestModel,
-    ForecastRunModel,
     HolidayModel,
     InventoryRecommendationModel,
-    ModelVersionModel,
     SKUModel,
-    StoreClusterModel,
     WeeklyForecastModel,
     WeeklySalesModel,
 )
 from src.db.repository import DuplicateRunError, ForecastRepository
 from src.db.session import create_async_db_engine, drop_db_schema, init_db_schema
 
-
-from pathlib import Path
 
 @pytest_asyncio.fixture
 async def test_db_engine(tmp_path: Path) -> AsyncEngine:

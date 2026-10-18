@@ -2,12 +2,23 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 from src.api.middleware import RequestTrackingMiddleware, register_exception_handlers
-from src.api.routes import audit, data, forecasts, health, inventory, jobs, models, reports
+from src.api.routes import (
+    audit,
+    data,
+    forecasts,
+    health,
+    inventory,
+    jobs,
+    models,
+    monitoring,
+    reports,
+)
 from src.core.config import settings
 from src.core.logging import get_logger
 
@@ -74,6 +85,7 @@ def create_application() -> FastAPI:
     app.include_router(inventory.router, prefix=settings.api_prefix)
     app.include_router(reports.router, prefix=settings.api_prefix)
     app.include_router(jobs.router, prefix=settings.api_prefix)
+    app.include_router(monitoring.router, prefix=settings.api_prefix)
 
     return app
 

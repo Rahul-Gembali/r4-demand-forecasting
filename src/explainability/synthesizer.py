@@ -5,9 +5,8 @@ category baseline fallbacks, business-rule adjustments, confidence scores,
 and non-causal human-readable prose synthesis.
 """
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from typing import Any
-import pandas as pd
 
 from src.explainability.confidence import SKUConfidenceMetrics
 from src.explainability.shap_engine import SKUFeatureContribution

@@ -5,8 +5,9 @@ import traceback
 import uuid
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
+
 from src.core.logging import get_logger
 
 logger = get_logger("job_manager")
@@ -19,7 +20,7 @@ class JobRecord:
     job_type: str
     status: str = "PENDING"  # PENDING, RUNNING, COMPLETED, FAILED
     progress_pct: float = 0.0
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
     result: dict[str, Any] | None = None
     error: str | None = None
@@ -84,12 +85,12 @@ class JobManager:
             record.status = "COMPLETED"
             record.progress_pct = 100.0
             record.result = result
-            record.completed_at = datetime.now(timezone.utc)
+            record.completed_at = datetime.now(UTC)
             logger.info(f"Background job [{record.job_id}] COMPLETED successfully.")
         except Exception as exc:
             record.status = "FAILED"
             record.error = str(exc)
-            record.completed_at = datetime.now(timezone.utc)
+            record.completed_at = datetime.now(UTC)
             logger.error(
                 f"Background job [{record.job_id}] FAILED: {exc}\n{traceback.format_exc()}"
             )

@@ -1,12 +1,13 @@
 """Model Registry and Asynchronous Training Endpoints."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from fastapi import APIRouter, Depends, status
+
 import numpy as np
 import pandas as pd
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,7 +33,7 @@ async def background_train_task(job: JobRecord, req_data: dict[str, Any]) -> dic
     job.update_progress(10.0)
     await asyncio.sleep(0.1)  # Yield to event loop
 
-    model_id = f"catboost_custom_{int(datetime.now(timezone.utc).timestamp())}"
+    model_id = f"catboost_custom_{int(datetime.now(UTC).timestamp())}"
     artifact_dir = Path("artifacts/models") / model_id
     artifact_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = artifact_dir / "catboost_model.cbm"

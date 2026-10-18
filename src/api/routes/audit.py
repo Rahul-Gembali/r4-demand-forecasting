@@ -1,11 +1,11 @@
 """Data discovery and audit status endpoints."""
 
-from dataclasses import asdict
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
+
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from src.core.config import settings
 from src.data.inspector import DataInspector

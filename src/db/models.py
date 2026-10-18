@@ -16,6 +16,7 @@ Normalized schema adhering to Phase 8 specifications:
 
 from datetime import date, datetime
 from typing import Any
+
 from sqlalchemy import (
     BigInteger,
     Boolean,

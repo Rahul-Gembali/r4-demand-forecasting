@@ -5,8 +5,8 @@ derived from prediction interval width, analogue similarity, model consensus,
 historical category track record, and product attribute typicality.
 """
 
-from dataclasses import asdict, dataclass, field
-from typing import Any
+from dataclasses import dataclass
+
 import numpy as np
 
 

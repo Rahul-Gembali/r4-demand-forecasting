@@ -4,12 +4,12 @@ Provides explicit understock (Cu) and overstock (Co) cost derivation,
 critical ratio calculation, validation, and multi-scenario analysis.
 """
 
-from dataclasses import asdict, dataclass, field
-from enum import Enum
+from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 
 
-class CostScenario(str, Enum):
+class CostScenario(StrEnum):
     """Pre-defined standard retail inventory cost scenarios."""
     CONSERVATIVE = "CONSERVATIVE"   # Low margin / high markdown penalty (protects working capital)
     BASE = "BASE"                   # Standard balanced retail department benchmark

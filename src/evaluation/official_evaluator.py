@@ -8,20 +8,16 @@ Strictly adheres to docs/EVALUATION_SPEC.md:
 - Submission integrity and schema validation for 150 evaluation SKUs.
 """
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-import json
-from pathlib import Path
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
+
 import numpy as np
 import pandas as pd
 
-from src.core.logging import logger
 from src.evaluation.metrics import (
-    ensure_numpy_arrays,
     forecast_bias_pct,
     mae,
-    pinball_loss,
     rmse,
     wape,
 )
@@ -249,7 +245,7 @@ class OfficialEvaluator:
                 }
 
         return OfficialEvaluationReport(
-            evaluation_timestamp=datetime.now(timezone.utc).isoformat(),
+            evaluation_timestamp=datetime.now(UTC).isoformat(),
             total_skus=int(merged["sku_id"].nunique()),
             total_horizon_points=len(merged),
             overall_wape=round(total_wape, 6),

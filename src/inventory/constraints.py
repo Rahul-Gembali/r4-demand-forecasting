@@ -1,8 +1,8 @@
 """Operational inventory constraints for initial buy quantity optimization."""
 
-from dataclasses import dataclass
 import math
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 
 @dataclass

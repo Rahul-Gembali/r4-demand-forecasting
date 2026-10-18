@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-import pytest
 
 # Ensure repository root is on sys.path
 root_dir = Path(__file__).resolve().parent.parent
