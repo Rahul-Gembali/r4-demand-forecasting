@@ -1,0 +1,91 @@
+{
+  "timestamp": "2026-10-18T13:06:44.995371+00:00",
+  "total_historical_skus": 1200,
+  "train_donor_skus": 1000,
+  "held_out_validation_skus": 200,
+  "split_ratio": "1000 train / 200 held-out (~16.7%)",
+  "models": [
+    {
+      "model_name": "Global Empirical Median",
+      "overall_wape": 0.346094,
+      "overall_rmse": 50.6036,
+      "overall_mae": 35.9369,
+      "overall_bias_pct": -7.4258,
+      "weekly_wape": {
+        "1": 0.364645,
+        "2": 0.354723,
+        "3": 0.35198,
+        "4": 0.357375,
+        "5": 0.31626,
+        "6": 0.326823,
+        "7": 0.336647,
+        "8": 0.329114
+      },
+      "sample_sku_count": 200,
+      "eval_points": 1600
+    },
+    {
+      "model_name": "Category/Subcategory Baseline (Median)",
+      "overall_wape": 0.344535,
+      "overall_rmse": 50.2912,
+      "overall_mae": 35.775,
+      "overall_bias_pct": -5.9433,
+      "weekly_wape": {
+        "1": 0.36583,
+        "2": 0.356895,
+        "3": 0.345695,
+        "4": 0.35956,
+        "5": 0.314082,
+        "6": 0.325205,
+        "7": 0.333557,
+        "8": 0.319326
+      },
+      "sample_sku_count": 200,
+      "eval_points": 1600
+    },
+    {
+      "model_name": "Category/Subcategory Baseline (Mean)",
+      "overall_wape": 0.352805,
+      "overall_rmse": 50.0351,
+      "overall_mae": 36.6337,
+      "overall_bias_pct": 1.0815,
+      "weekly_wape": {
+        "1": 0.368739,
+        "2": 0.373934,
+        "3": 0.354695,
+        "4": 0.371126,
+        "5": 0.320449,
+        "6": 0.327402,
+        "7": 0.339011,
+        "8": 0.327937
+      },
+      "sample_sku_count": 200,
+      "eval_points": 1600
+    },
+    {
+      "model_name": "Top-5 Analogue Retrieval (Power-2 Weighted)",
+      "overall_wape": 0.294244,
+      "overall_rmse": 41.0396,
+      "overall_mae": 30.553,
+      "overall_bias_pct": -2.158,
+      "weekly_wape": {
+        "1": 0.29458,
+        "2": 0.30372,
+        "3": 0.27989,
+        "4": 0.304816,
+        "5": 0.292566,
+        "6": 0.298804,
+        "7": 0.273963,
+        "8": 0.302857
+      },
+      "sample_sku_count": 200,
+      "eval_points": 1600
+    }
+  ],
+  "observations_and_limitations": [
+    "Category baselines predict static profiles that ignore granular product attributes (price, material, colour).",
+    "Analogue retrieval provides adaptive attribute-specific forecasts, but variance is sensitive to the donor pool density.",
+    "Both models lack cross-sectional gradient boosting or complex interactions, which will be addressed in Phase 4.",
+    "Evaluation was conducted on enterprise-aggregated weekly totals; store-level allocation requires spatial disaggregation."
+  ]
+}
