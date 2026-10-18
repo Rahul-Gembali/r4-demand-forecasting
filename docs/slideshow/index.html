@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>R4 Demand Forecasting - 16:9 Architectural Slideshow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    :root {
+      --bg-surface: #F8FAFC;
+      --border-color: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --cobalt: #2563EB;
+      --cobalt-soft: #EFF6FF;
+    }
+    body {
+      background-color: #0F172A;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+    .header-bar {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      color: #94A3B8;
+    }
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      color: #F8FAFC;
+    }
+    .brand-pill {
+      background: var(--cobalt);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: #CBD5E1;
+      background: #1E293B;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #334155;
+    }
+    /* 16:9 Presentation Frame */
+    .stage-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      background: #FFFFFF;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+    .slide-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.985);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .slide-img.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+    /* Navigation Bar */
+    .controls-bar {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 18px;
+    }
+    .nav-btn {
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #F8FAFC;
+      padding: 10px 22px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background: #334155;
+      border-color: var(--cobalt);
+      color: #FFFFFF;
+    }
+    .dots-container {
+      display: flex;
+      gap: 10px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #334155;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot.active {
+      width: 32px;
+      border-radius: 10px;
+      background: var(--cobalt);
+    }
+    .hint-text {
+      color: #64748B;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <div class="brand-title">
+      <span class="brand-pill">R4 PLATFORM</span>
+      <span>Cold-Start Demand Architecture (16:9 Slideshow)</span>
+    </div>
+    <div class="slide-counter" id="slideIndicator">01 / 05</div>
+  </div>
+
+  <div class="stage-wrapper" id="stage">
+    <img class="slide-img active" src="assets/slide1_cold_start_dilemma_1792340443616.jpg" alt="Slide 1: Cold-Start Dilemma" />
+    <img class="slide-img" src="assets/slide2_costly_traps_1792340461261.jpg" alt="Slide 2: Costly Traps" />
+    <img class="slide-img" src="assets/slide3_intelligence_core_1792340478318.jpg" alt="Slide 3: Intelligence Core" />
+    <img class="slide-img" src="assets/slide4_uncertainty_bands_buy_decision_1792340496366.jpg" alt="Slide 4: Uncertainty Bands & Buy Decision" />
+    <img class="slide-img" src="assets/slide5_production_platform_1792340513859.jpg" alt="Slide 5: Production Platform" />
+  </div>
+
+  <div class="controls-bar">
+    <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+    <div class="dots-container" id="dotsContainer">
+      <div class="dot active" onclick="goToSlide(0)"></div>
+      <div class="dot" onclick="goToSlide(1)"></div>
+      <div class="dot" onclick="goToSlide(2)"></div>
+      <div class="dot" onclick="goToSlide(3)"></div>
+      <div class="dot" onclick="goToSlide(4)"></div>
+    </div>
+    <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+  </div>
+
+  <div class="hint-text">Tip: Use Left / Right arrow keys or Spacebar to navigate between slides.</div>
+
+  <script>
+    let currentSlide = 0;
+    const totalSlides = 5;
+    const slides = document.querySelectorAll('.slide-img');
+    const dots = document.querySelectorAll('.dot');
+    const indicator = document.getElementById('slideIndicator');
+
+    function updateSlide() {
+      slides.forEach((slide, index) => {
+        slide.classList.toggle('active', index === currentSlide);
+      });
+      dots.forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentSlide);
+      });
+      indicator.textContent = `0${currentSlide + 1} / 0${totalSlides}`;
+    }
+
+    function changeSlide(direction) {
+      currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+      updateSlide();
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      updateSlide();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        changeSlide(1);
+      } else if (e.key === 'ArrowLeft') {
+        changeSlide(-1);
+      }
+    });
+  </script>
+</body>
+</html>
