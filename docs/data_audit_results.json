@@ -1,0 +1,9 @@
+{
+  "directory_path": "data\\raw",
+  "total_files_scanned": 0,
+  "files_audited": [],
+  "summary_findings": {},
+  "blockers": [
+    "No valid dataset files (.csv, .parquet, .xlsx, .json) found in data\\raw."
+  ]
+}

@@ -1,0 +1,25 @@
+# Core Service & API
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+
+# Database & Persistence
+sqlalchemy>=2.0.30
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
+
+# Data Engineering & Science
+pandas>=2.2.0
+pyarrow>=17.0.0
+numpy>=1.26.0
+scipy>=1.13.0
+openpyxl>=3.1.5
+
+# Machine Learning
+scikit-learn>=1.5.0
+lightgbm>=4.3.0
+
+# Configuration & Utilities
+python-dotenv>=1.0.1
+requests>=2.32.0
