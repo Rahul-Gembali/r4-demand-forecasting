@@ -10,19 +10,18 @@
 7. Generates 8-week predictions for the 150 new evaluation SKUs.
 """
 
-from dataclasses import asdict
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+
 import numpy as np
 import pandas as pd
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.logging import logger
 from src.data.manifest import compute_file_sha256, get_git_commit_hash
 from src.evaluation.metrics import (
     calculate_metrics_summary,
@@ -266,7 +265,7 @@ def main() -> int:
 
     training_manifest = {
         "manifest_version": "1.0.0",
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "git_commit": get_git_commit_hash(),
         "train_skus_count": len(splits.train_skus),
         "val_skus_count": len(splits.val_skus),
@@ -311,7 +310,7 @@ def generate_markdown_report(
     lines = [
         "# PHASE 4 BENCHMARK REPORT — SUPERVISED DEMAND FORECASTING",
         "",
-        f"**Benchmark Date:** `{datetime.now(timezone.utc).isoformat()}`  ",
+        f"**Benchmark Date:** `{datetime.now(UTC).isoformat()}`  ",
         "**Target Population:** 200 Held-Out Historical Cold-Start Launch SKUs (Strict SKU Fencing)  ",
         "**Evaluation Metric:** Weighted Absolute Percentage Error (WAPE)  ",
         "",

@@ -1,0 +1,141 @@
+# =============================================================================
+# R4 Cold-Start Retail Demand Forecasting - Multi-Container Deployment
+# Orchestrates: PostgreSQL 16, FastAPI Backend, React Frontend, and Worker
+# =============================================================================
+
+version: "3.8"
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. PostgreSQL Relational Persistence Store
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: r4-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: r4_forecast_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_pass_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d r4_forecast_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - r4-network
+
+  # ---------------------------------------------------------------------------
+  # 2. FastAPI Supervised Forecasting & Optimization Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: r4-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres_secure_pass_2026}@postgres:5432/r4_forecast_db
+      SECRET_KEY: ${SECRET_KEY:-r4-production-jwt-secret-key-must-change}
+      API_KEY_ADMIN: ${API_KEY_ADMIN:-r4-admin-key-2026}
+      API_KEY_OPERATOR: ${API_KEY_OPERATOR:-r4-operator-key-2026}
+      API_KEY_VIEWER: ${API_KEY_VIEWER:-r4-viewer-key-2026}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173,http://frontend:80
+      RUN_DB_SEED: ${RUN_DB_SEED:-true}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    volumes:
+      - r4_artifacts:/app/artifacts
+      - r4_data:/app/data
+      - r4_logs:/app/logs
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - r4-network
+
+  # ---------------------------------------------------------------------------
+  # 3. React + TypeScript + Nginx Interactive Forecasting Dashboard
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: r4-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - r4-network
+
+  # ---------------------------------------------------------------------------
+  # 4. Background Telemetry & Verification Worker
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: r4-worker
+    restart: unless-stopped
+    command: ["python", "scripts/verify_api_live.py", "--health-only"]
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      API_BASE_URL: http://backend:8000
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres_secure_pass_2026}@postgres:5432/r4_forecast_db
+      API_KEY_ADMIN: ${API_KEY_ADMIN:-r4-admin-key-2026}
+      API_KEY_OPERATOR: ${API_KEY_OPERATOR:-r4-operator-key-2026}
+      API_KEY_VIEWER: ${API_KEY_VIEWER:-r4-viewer-key-2026}
+    volumes:
+      - r4_artifacts:/app/artifacts
+      - r4_data:/app/data
+    networks:
+      - r4-network
+
+# -----------------------------------------------------------------------------
+# Persistent Volumes & Network Bridges
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  r4_artifacts:
+    driver: local
+  r4_data:
+    driver: local
+  r4_logs:
+    driver: local
+
+networks:
+  r4-network:
+    driver: bridge

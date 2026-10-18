@@ -10,20 +10,19 @@
 7. Saves comprehensive audit manifests and compiles docs/FORECAST_EXPLANATIONS_AND_CONFIDENCE_REPORT.md.
 """
 
-from dataclasses import asdict
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import sys
+from dataclasses import asdict
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
-import numpy as np
+
 import pandas as pd
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.logging import logger
-from src.explainability.confidence import ConfidenceScorer, SKUConfidenceMetrics
+from src.explainability.confidence import ConfidenceScorer
 from src.explainability.shap_engine import TreeShapEngine
 from src.explainability.synthesizer import CompleteSKUExplanation, ExplanationSynthesizer
 from src.models.supervised import ColdStartPredictor
@@ -204,7 +203,7 @@ def main() -> int:
 
     # 5c. Confidence Summary Manifest
     summary_manifest = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "total_skus": len(df_ranked),
         "mean_confidence_score": round(float(df_ranked["confidence_score"].mean()), 2),
         "median_confidence_score": round(float(df_ranked["confidence_score"].median()), 2),

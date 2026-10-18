@@ -4,8 +4,8 @@
 Executes raw-to-processed pipeline, validates data quality, and outputs manifests.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -29,8 +29,8 @@ def main() -> int:
         print(f"  - Data Quality Status:        {quality_report.overall_status}")
         print(f"  - Target Leakage Check:       {'PASSED (ZERO LEAKAGE)' if quality_report.leakage_check_passed else 'FAILED'}")
         print(f"  - Git Lineage Commit:         {manifest.git_commit[:8] if manifest.git_commit else 'N/A'}")
-        print(f"  - Manifest Location:          data/processed/data_manifest.json")
-        print(f"  - Audit Report Location:      docs/DATA_QUALITY_REPORT.md\n")
+        print("  - Manifest Location:          data/processed/data_manifest.json")
+        print("  - Audit Report Location:      docs/DATA_QUALITY_REPORT.md\n")
 
         print("Quality Audit Checks Breakdown:")
         for check in quality_report.checks:

@@ -9,22 +9,20 @@ Evaluates Conservative, Base, and Aggressive cost scenarios, operational constra
 and generates a comprehensive sensitivity analysis.
 """
 
-from dataclasses import asdict
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
-import numpy as np
+
 import pandas as pd
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.logging import logger
 from src.inventory.constraints import InventoryConstraints
-from src.inventory.cost_model import CostModel, CostScenario
-from src.inventory.optimizer import BuyRecommendation, NewsvendorOptimizer
+from src.inventory.cost_model import CostScenario
+from src.inventory.optimizer import NewsvendorOptimizer
 
 
 def main() -> int:
@@ -177,7 +175,7 @@ def main() -> int:
 
     # 6. Save Optimization Summary JSON
     summary_data = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "total_skus": len(df_out),
         "total_8w_forecast_demand": round(total_cum_demand, 1),
         "total_buy_quantity_base": total_buy_base,
@@ -219,7 +217,7 @@ def generate_markdown_report(
         "# PHASE 6 INVENTORY & BUY QUANTITY OPTIMIZATION REPORT",
         "",
         f"**Optimization Date:** `{summary['generated_at']}`  ",
-        f"**Target Population:** 150 New Cold-Start Evaluation SKUs  ",
+        "**Target Population:** 150 New Cold-Start Evaluation SKUs  ",
         "**Planning Horizon:** 8 Weeks (Introductory Lifecycle Period)  ",
         "**Optimization Framework:** Single-Period Stochastic Newsvendor Model  ",
         "",

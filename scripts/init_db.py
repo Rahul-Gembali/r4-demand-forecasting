@@ -20,7 +20,7 @@ import asyncio
 import hashlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,15 +33,8 @@ from sqlalchemy import func, select
 from src.core.config import settings
 from src.core.logging import get_logger
 from src.db.models import (
-    Base,
-    ClusterAllocationModel,
-    DataManifestModel,
-    ForecastRunModel,
-    HolidayModel,
     InventoryRecommendationModel,
-    ModelVersionModel,
     SKUModel,
-    StoreClusterModel,
     WeeklyForecastModel,
     WeeklySalesModel,
 )
@@ -71,8 +64,23 @@ async def seed_database(
     db_url: str,
     reset: bool = False,
     sales_limit: int = 10000,
+    force_production_seed: bool = False,
 ) -> dict[str, Any]:
     """Execute complete database schema initialization and seed ingestion."""
+    import os
+
+    is_prod = (
+        getattr(settings, "environment", "development").lower() == "production"
+        or os.getenv("ENVIRONMENT", "").lower() == "production"
+    )
+    allow_seed_env = os.getenv("ALLOW_DEV_SEED", "").lower() in ("true", "1", "yes")
+
+    if is_prod and not (force_production_seed or allow_seed_env):
+        raise RuntimeError(
+            "CRITICAL SAFETY GUARD: Seeding or resetting a production database is prohibited to prevent data contamination! "
+            "To override this safeguard in production, you must set ALLOW_DEV_SEED=true or pass --force-production-seed."
+        )
+
     logger.info(f"Connecting to database: {normalize_database_url(db_url, sync=False)}")
     engine = create_async_db_engine(db_url, echo=False)
 
@@ -202,7 +210,12 @@ async def seed_database(
         # 4. Historical Weekly Sales (Sampled / Ingested)
         # ---------------------------------------------------------------------
         train_features_path = Path("data/processed/train_features.parquet")
-        if train_features_path.exists():
+        sales_count_stmt = select(func.count(WeeklySalesModel.id))
+        existing_sales_count = (await session.execute(sales_count_stmt)).scalar_one()
+        if existing_sales_count > 0:
+            logger.info(f"Database already contains {existing_sales_count} sales observations, skipping re-insertion.")
+            stats["weekly_sales"] = existing_sales_count
+        elif train_features_path.exists():
             logger.info(f"Loading historical weekly sales from {train_features_path} (limit: {sales_limit} records)...")
             df_sales = pd.read_parquet(train_features_path).head(sales_limit)
             sales_recs = []
@@ -234,7 +247,7 @@ async def seed_database(
         train_sha = ""
 
         if model_config_path.exists():
-            with open(model_config_path, "r", encoding="utf-8") as f:
+            with open(model_config_path, encoding="utf-8") as f:
                 model_cfg = json.load(f)
                 hyperparams = {
                     "iterations": model_cfg.get("iterations"),
@@ -249,13 +262,13 @@ async def seed_database(
                 }
 
         if val_report_path.exists():
-            with open(val_report_path, "r", encoding="utf-8") as f:
+            with open(val_report_path, encoding="utf-8") as f:
                 val_data = json.load(f)
                 if "Supervised CatBoost GBDT" in val_data:
                     val_wape = val_data["Supervised CatBoost GBDT"].get("overall_wape", 0.3168)
 
         if train_manifest_path.exists():
-            with open(train_manifest_path, "r", encoding="utf-8") as f:
+            with open(train_manifest_path, encoding="utf-8") as f:
                 t_m = json.load(f)
                 train_sha = t_m.get("train_features_sha256", "")
 
@@ -279,165 +292,177 @@ async def seed_database(
         # 6. Official Evaluation Forecast Run (RUN_EVAL_150_V1)
         # ---------------------------------------------------------------------
         run_id = "RUN_EVAL_150_V1"
-        eval_run = await repo.create_forecast_run(
-            {
-                "run_id": run_id,
-                "model_id": "v1.0.0-catboost-coldstart",
-                "run_type": "EVALUATION_150",
-                "status": "COMPLETED",
-                "input_manifest_sha256": calculate_sha256(Path("data/raw/new_sku_attributes.csv")),
-                "sku_count": 150,
-                "overall_wape": val_wape,
-                "overall_bias_pct": -3.76,
-                "reproducibility_seed": 42,
-                "execution_metadata": {
-                    "conformal_calibration": "split_conformal_residual_quantile",
-                    "coverage_levels": [0.80, 0.90],
-                    "inventory_decision": "single_period_newsvendor_moq_pack",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+        existing_run = await repo.get_forecast_run(run_id)
+        if existing_run is None:
+            eval_run = await repo.create_forecast_run(
+                {
+                    "run_id": run_id,
+                    "model_id": "v1.0.0-catboost-coldstart",
+                    "run_type": "EVALUATION_150",
+                    "status": "COMPLETED",
+                    "input_manifest_sha256": calculate_sha256(Path("data/raw/new_sku_attributes.csv")),
+                    "sku_count": 150,
+                    "overall_wape": val_wape,
+                    "overall_bias_pct": -3.76,
+                    "reproducibility_seed": 42,
+                    "execution_metadata": {
+                        "conformal_calibration": "split_conformal_residual_quantile",
+                        "coverage_levels": [0.80, 0.90],
+                        "inventory_decision": "single_period_newsvendor_moq_pack",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    },
+                    "completed_at": datetime.now(UTC),
                 },
-                "completed_at": datetime.now(timezone.utc),
-            },
-            prevent_duplicates=False,
-        )
-        logger.info(f"Created forecast run: {eval_run.run_id}")
+                prevent_duplicates=False,
+            )
+            logger.info(f"Created forecast run: {eval_run.run_id}")
+        else:
+            logger.info(f"Using existing forecast run: {run_id}")
         stats["forecast_runs"] = 1
 
-        # ---------------------------------------------------------------------
-        # 7. Weekly Forecasts (150 SKUs x 8 Weeks = 1,200 rows)
-        # ---------------------------------------------------------------------
-        fc_path = Path("data/processed/forecasts_with_intervals_150_skus.csv")
-        if fc_path.exists():
-            df_fc = pd.read_csv(fc_path)
-            fc_records = []
-            for _, r in df_fc.iterrows():
-                fc_records.append(
-                    {
-                        "sku_id": str(r["sku_id"]),
-                        "horizon_week": int(r["horizon_week"]),
-                        "predicted_sales": float(r["predicted_sales"]),
-                        "lower_bound_80": float(r["lower_bound_80"]) if pd.notna(r.get("lower_bound_80")) else None,
-                        "upper_bound_80": float(r["upper_bound_80"]) if pd.notna(r.get("upper_bound_80")) else None,
-                        "lower_bound_90": float(r["lower_bound_90"]) if pd.notna(r.get("lower_bound_90")) else None,
-                        "upper_bound_90": float(r["upper_bound_90"]) if pd.notna(r.get("upper_bound_90")) else None,
-                    }
-                )
-            n_fc = await repo.save_weekly_forecasts(run_id, fc_records)
-            logger.info(f"Ingested {n_fc} weekly forecasts with conformal prediction intervals.")
-            stats["weekly_forecasts"] = n_fc
+        # Check existing forecasts count for run
+        fc_check_stmt = select(func.count(WeeklyForecastModel.id)).where(WeeklyForecastModel.run_id == run_id)
+        existing_fc_count = (await session.execute(fc_check_stmt)).scalar_one()
 
-        # ---------------------------------------------------------------------
-        # 8. Analogue Matches
-        # ---------------------------------------------------------------------
-        analogues_path = Path("data/processed/analogue_retrieval_records.json")
-        if analogues_path.exists():
-            with open(analogues_path, "r", encoding="utf-8") as f:
-                an_data = json.load(f)
-            an_records = []
-            for item in an_data:
-                q_sku = item["query_sku_id"]
-                for match in item.get("top_k_matches", []):
-                    an_records.append(
+        if existing_fc_count > 0:
+            logger.info(f"Forecast run '{run_id}' already populated with {existing_fc_count} forecasts, skipping items.")
+            stats["weekly_forecasts"] = existing_fc_count
+        else:
+            # ---------------------------------------------------------------------
+            # 7. Weekly Forecasts (150 SKUs x 8 Weeks = 1,200 rows)
+            # ---------------------------------------------------------------------
+            fc_path = Path("data/processed/forecasts_with_intervals_150_skus.csv")
+            if fc_path.exists():
+                df_fc = pd.read_csv(fc_path)
+                fc_records = []
+                for _, r in df_fc.iterrows():
+                    fc_records.append(
                         {
-                            "query_sku_id": q_sku,
-                            "analogue_sku_id": match["analogue_sku_id"],
-                            "rank": int(match["rank"]),
-                            "similarity_score": float(match["similarity_score"]),
-                            "observed_curve": match.get("observed_curve"),
+                            "sku_id": str(r["sku_id"]),
+                            "horizon_week": int(r["horizon_week"]),
+                            "predicted_sales": float(r["predicted_sales"]),
+                            "lower_bound_80": float(r["lower_bound_80"]) if pd.notna(r.get("lower_bound_80")) else None,
+                            "upper_bound_80": float(r["upper_bound_80"]) if pd.notna(r.get("upper_bound_80")) else None,
+                            "lower_bound_90": float(r["lower_bound_90"]) if pd.notna(r.get("lower_bound_90")) else None,
+                            "upper_bound_90": float(r["upper_bound_90"]) if pd.notna(r.get("upper_bound_90")) else None,
                         }
                     )
-            n_an = await repo.save_analogue_matches(run_id, an_records)
-            logger.info(f"Ingested {n_an} analogue match relationships.")
-            stats["analogue_matches"] = n_an
+                n_fc = await repo.save_weekly_forecasts(run_id, fc_records)
+                logger.info(f"Ingested {n_fc} weekly forecasts with conformal prediction intervals.")
+                stats["weekly_forecasts"] = n_fc
 
-        # ---------------------------------------------------------------------
-        # 9. Inventory Recommendations & Confidence Rankings
-        # ---------------------------------------------------------------------
-        rec_path = Path("data/processed/inventory_buy_recommendations_150_skus.csv")
-        expl_path = Path("data/processed/forecast_explanations_150_skus.json")
-
-        explanations_map = {}
-        if expl_path.exists():
-            with open(expl_path, "r", encoding="utf-8") as f:
-                for exp in json.load(f):
-                    explanations_map[exp["sku_id"]] = exp
-
-        if rec_path.exists():
-            df_rec = pd.read_csv(rec_path)
-            rec_records = []
-            for _, r in df_rec.iterrows():
-                sku_id = str(r["sku_id"])
-                exp_entry = explanations_map.get(sku_id, {})
-                conf_score = exp_entry.get("confidence_score")
-                conf_tier = exp_entry.get("confidence_tier")
-                summary_text = exp_entry.get("human_readable_summary")
-
-                # Base assumptions
-                base_price = float(r["base_price"])
-                assumptions = {
-                    "base_price": base_price,
-                    "cost_price": round(base_price * 0.55, 2),
-                    "salvage_price": round(base_price * 0.20, 2),
-                    "min_order_qty": 50,
-                    "case_pack_size": 6,
-                    "scenario": "BASE",
-                }
-
-                rec_records.append(
-                    {
-                        "sku_id": sku_id,
-                        "scenario": "BASE",
-                        "forecast_cumulative_8w": float(r["forecast_cumul_8w"]),
-                        "recommended_buy_quantity": int(r["buy_qty_base"]),
-                        "unconstrained_quantity": float(r["forecast_cumul_8w"] + r["safety_stock_base"]),
-                        "critical_ratio": float(r["critical_ratio_base"]),
-                        "understock_cost_cu": round(base_price * 0.45, 2),
-                        "overstock_cost_co": round(base_price * 0.35, 2),
-                        "expected_shortage_units": float(r["exp_shortage_base"]),
-                        "expected_excess_units": float(r["exp_excess_base"]),
-                        "expected_total_cost": float(r["exp_cost_base"]),
-                        "expected_fill_rate_pct": float(r["fill_rate_base_pct"]),
-                        "confidence_score": conf_score,
-                        "confidence_tier": conf_tier,
-                        "explanation_summary": summary_text,
-                        "assumptions": assumptions,
-                    }
-                )
-
-            n_recs = await repo.save_inventory_recommendations(run_id, rec_records)
-            logger.info(f"Ingested {n_recs} inventory recommendations with confidence scores.")
-            stats["inventory_recommendations"] = n_recs
-
-            # -----------------------------------------------------------------
-            # 10. Proportional Cluster Allocations (Optional Feature)
-            # -----------------------------------------------------------------
-            # Distribute inventory across clusters based on historical cluster weights
-            clusters = await repo.list_store_clusters()
-            if clusters:
-                total_stores = sum(c.store_count for c in clusters)
-                rec_models_stmt = select(InventoryRecommendationModel).where(
-                    InventoryRecommendationModel.run_id == run_id
-                )
-                rec_models = list((await session.execute(rec_models_stmt)).scalars().all())
-
-                alloc_count = 0
-                for rec_item in rec_models:
-                    allocations = []
-                    for c in clusters:
-                        weight = round(c.store_count / total_stores, 4)
-                        qty = int(round(rec_item.recommended_buy_quantity * weight))
-                        allocations.append(
+            # ---------------------------------------------------------------------
+            # 8. Analogue Matches
+            # ---------------------------------------------------------------------
+            analogues_path = Path("data/processed/analogue_retrieval_records.json")
+            if analogues_path.exists():
+                with open(analogues_path, encoding="utf-8") as f:
+                    an_data = json.load(f)
+                an_records = []
+                for item in an_data:
+                    q_sku = item["query_sku_id"]
+                    for match in item.get("top_k_matches", []):
+                        an_records.append(
                             {
-                                "cluster_id": c.cluster_id,
-                                "allocated_quantity": qty,
-                                "allocation_weight": weight,
+                                "query_sku_id": q_sku,
+                                "analogue_sku_id": match["analogue_sku_id"],
+                                "rank": int(match["rank"]),
+                                "similarity_score": float(match["similarity_score"]),
+                                "observed_curve": match.get("observed_curve"),
                             }
                         )
-                    alloc_count += await repo.save_cluster_allocations(
-                        rec_item.id, rec_item.sku_id, allocations
+                n_an = await repo.save_analogue_matches(run_id, an_records)
+                logger.info(f"Ingested {n_an} analogue match relationships.")
+                stats["analogue_matches"] = n_an
+
+            # ---------------------------------------------------------------------
+            # 9. Inventory Recommendations & Confidence Rankings
+            # ---------------------------------------------------------------------
+            rec_path = Path("data/processed/inventory_buy_recommendations_150_skus.csv")
+            expl_path = Path("data/processed/forecast_explanations_150_skus.json")
+
+            explanations_map = {}
+            if expl_path.exists():
+                with open(expl_path, encoding="utf-8") as f:
+                    for exp in json.load(f):
+                        explanations_map[exp["sku_id"]] = exp
+
+            if rec_path.exists():
+                df_rec = pd.read_csv(rec_path)
+                rec_records = []
+                for _, r in df_rec.iterrows():
+                    sku_id = str(r["sku_id"])
+                    exp_entry = explanations_map.get(sku_id, {})
+                    conf_score = exp_entry.get("confidence_score")
+                    conf_tier = exp_entry.get("confidence_tier")
+                    summary_text = exp_entry.get("human_readable_summary")
+
+                    # Base assumptions
+                    base_price = float(r["base_price"])
+                    assumptions = {
+                        "base_price": base_price,
+                        "cost_price": round(base_price * 0.55, 2),
+                        "salvage_price": round(base_price * 0.20, 2),
+                        "min_order_qty": 50,
+                        "case_pack_size": 6,
+                        "scenario": "BASE",
+                    }
+
+                    rec_records.append(
+                        {
+                            "sku_id": sku_id,
+                            "scenario": "BASE",
+                            "forecast_cumulative_8w": float(r["forecast_cumul_8w"]),
+                            "recommended_buy_quantity": int(r["buy_qty_base"]),
+                            "unconstrained_quantity": float(r["forecast_cumul_8w"] + r["safety_stock_base"]),
+                            "critical_ratio": float(r["critical_ratio_base"]),
+                            "understock_cost_cu": round(base_price * 0.45, 2),
+                            "overstock_cost_co": round(base_price * 0.35, 2),
+                            "expected_shortage_units": float(r["exp_shortage_base"]),
+                            "expected_excess_units": float(r["exp_excess_base"]),
+                            "expected_total_cost": float(r["exp_cost_base"]),
+                            "expected_fill_rate_pct": float(r["fill_rate_base_pct"]),
+                            "confidence_score": conf_score,
+                            "confidence_tier": conf_tier,
+                            "explanation_summary": summary_text,
+                            "assumptions": assumptions,
+                        }
                     )
-                logger.info(f"Generated {alloc_count} store cluster inventory allocations.")
-                stats["cluster_allocations"] = alloc_count
+
+                n_recs = await repo.save_inventory_recommendations(run_id, rec_records)
+                logger.info(f"Ingested {n_recs} inventory recommendations with confidence scores.")
+                stats["inventory_recommendations"] = n_recs
+
+                # -----------------------------------------------------------------
+                # 10. Proportional Cluster Allocations (Optional Feature)
+                # -----------------------------------------------------------------
+                # Distribute inventory across clusters based on historical cluster weights
+                clusters = await repo.list_store_clusters()
+                if clusters:
+                    total_stores = sum(c.store_count for c in clusters)
+                    rec_models_stmt = select(InventoryRecommendationModel).where(
+                        InventoryRecommendationModel.run_id == run_id
+                    )
+                    rec_models = list((await session.execute(rec_models_stmt)).scalars().all())
+
+                    alloc_count = 0
+                    for rec_item in rec_models:
+                        allocations = []
+                        for c in clusters:
+                            weight = round(c.store_count / total_stores, 4)
+                            qty = int(round(rec_item.recommended_buy_quantity * weight))
+                            allocations.append(
+                                {
+                                    "cluster_id": c.cluster_id,
+                                    "allocated_quantity": qty,
+                                    "allocation_weight": weight,
+                                }
+                            )
+                        alloc_count += await repo.save_cluster_allocations(
+                            rec_item.id, rec_item.sku_id, allocations
+                        )
+                    logger.info(f"Generated {alloc_count} store cluster inventory allocations.")
+                    stats["cluster_allocations"] = alloc_count
 
         # ---------------------------------------------------------------------
         # 11. Data Lineage Manifests
@@ -454,7 +479,7 @@ async def seed_database(
         for m_type, m_path in manifest_files:
             if m_path.exists():
                 sha = calculate_sha256(m_path)
-                line_count = sum(1 for _ in open(m_path, "r", encoding="utf-8")) - 1
+                line_count = sum(1 for _ in open(m_path, encoding="utf-8")) - 1
                 await repo.record_data_manifest(
                     {
                         "manifest_type": m_type,
@@ -537,6 +562,11 @@ def main() -> None:
         default=10000,
         help="Number of historical sales rows to ingest.",
     )
+    parser.add_argument(
+        "--force-production-seed",
+        action="store_true",
+        help="Explicitly override the production safety guard to permit database seeding.",
+    )
     args = parser.parse_args()
 
     asyncio.run(
@@ -544,6 +574,7 @@ def main() -> None:
             db_url=args.db_url,
             reset=args.reset,
             sales_limit=args.sales_limit,
+            force_production_seed=args.force_production_seed,
         )
     )
 

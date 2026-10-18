@@ -8,6 +8,8 @@ pydantic-settings>=2.4.0
 sqlalchemy>=2.0.30
 asyncpg>=0.29.0
 psycopg2-binary>=2.9.9
+aiosqlite>=0.20.0
+alembic>=1.13.0
 
 # Data Engineering & Science
 pandas>=2.2.0
@@ -19,6 +21,7 @@ openpyxl>=3.1.5
 # Machine Learning
 scikit-learn>=1.5.0
 lightgbm>=4.3.0
+catboost>=1.2.5
 
 # Configuration & Utilities
 python-dotenv>=1.0.1

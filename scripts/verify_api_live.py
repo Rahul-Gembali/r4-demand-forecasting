@@ -1,12 +1,13 @@
 """Live integration verification script for FastAPI endpoints."""
 
-import requests
-import json
+import os
 
-BASE = "http://127.0.0.1:8000"
-ADMIN_HEADERS = {"X-API-Key": "r4-admin-key-2026"}
-OPERATOR_HEADERS = {"X-API-Key": "r4-operator-key-2026"}
-VIEWER_HEADERS = {"X-API-Key": "r4-viewer-key-2026"}
+import requests
+
+BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+ADMIN_HEADERS = {"X-API-Key": os.getenv("API_KEY_ADMIN", "r4-admin-key-2026")}
+OPERATOR_HEADERS = {"X-API-Key": os.getenv("API_KEY_OPERATOR", "r4-operator-key-2026")}
+VIEWER_HEADERS = {"X-API-Key": os.getenv("API_KEY_VIEWER", "r4-viewer-key-2026")}
 
 def run_checks():
     print("=== 1. Health Probe ===")

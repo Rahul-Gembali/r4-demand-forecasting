@@ -5,15 +5,14 @@ Can be rerun repeatedly as new datasets are ingested.
 """
 
 import argparse
-from dataclasses import asdict
 import json
-from pathlib import Path
 import sys
+from dataclasses import asdict
+from pathlib import Path
 
 # Ensure src is in python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.logging import logger
 from src.data.inspector import DataInspector
 
 

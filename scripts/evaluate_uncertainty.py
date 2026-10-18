@@ -11,32 +11,21 @@
 8. Compiles docs/OFFICIAL_EVALUATION_REPORT.md.
 """
 
-from dataclasses import asdict
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import sys
-from typing import Any
-import numpy as np
+from dataclasses import asdict
+from pathlib import Path
+
 import pandas as pd
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.core.logging import logger
-from src.evaluation.metrics import (
-    forecast_bias_pct,
-    mae,
-    pinball_loss,
-    rmse,
-    wape,
-)
 from src.evaluation.official_evaluator import OfficialEvaluationReport, OfficialEvaluator
 from src.evaluation.uncertainty import (
     ConformalIntervalCalibrator,
     empirical_coverage,
     mean_interval_width,
-    winkler_score,
 )
 from src.models.supervised import (
     CatBoostForecaster,
@@ -129,11 +118,11 @@ def main() -> int:
     sku_test_cum["cumul_upper_90"] = c_u90
 
     # Map cumulative bounds back to weekly test_df for evaluator compatibility
-    test_df["cumul_pred_8w"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], cum_preds)))
-    test_df["cumul_lower_80"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_l80)))
-    test_df["cumul_upper_80"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_u80)))
-    test_df["cumul_lower_90"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_l90)))
-    test_df["cumul_upper_90"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_u90)))
+    test_df["cumul_pred_8w"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], cum_preds, strict=False)))
+    test_df["cumul_lower_80"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_l80, strict=False)))
+    test_df["cumul_upper_80"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_u80, strict=False)))
+    test_df["cumul_lower_90"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_l90, strict=False)))
+    test_df["cumul_upper_90"] = test_df["sku_id"].map(dict(zip(sku_test_cum["sku_id"], c_u90, strict=False)))
 
     # Compute Naive Summed Weekly Bounds for comparison (demonstrating why naive summing fails)
     naive_sku = test_df.groupby("sku_id").agg({

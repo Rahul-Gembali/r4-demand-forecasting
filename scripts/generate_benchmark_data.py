@@ -5,9 +5,9 @@ Used for rigorous demonstration of raw-to-processed pipeline when external files
 Strictly isolates the 150 target evaluation SKUs and their hidden 8-week sales labels.
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
-import sys
+
 import numpy as np
 import pandas as pd
 
