@@ -37,9 +37,11 @@ graph TD
 - Docker Compose $\ge 2.20$
 - 4GB RAM minimum (8GB recommended for CatBoost training)
 
-### Step 1: Environment Setup
-Copy the production environment template:
+### Step 1: Clone Repository & Environment Setup
+Clone the repository from GitHub and prepare your local environment file:
 ```bash
+git clone https://github.com/Rahul-Gembali/r4-demand-forecasting.git
+cd r4-demand-forecasting
 cp .env.example .env
 ```
 Ensure you update `SECRET_KEY`, `POSTGRES_PASSWORD`, and API keys in `.env` before deploying to staging or production.

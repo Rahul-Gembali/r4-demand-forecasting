@@ -1,5 +1,12 @@
 # R4 New Product Demand Forecasting Platform
 
+[![GitHub repository](https://img.shields.io/badge/GitHub-Rahul--Gembali%2Fr4--demand--forecasting-blue?logo=github)](https://github.com/Rahul-Gembali/r4-demand-forecasting)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg?logo=python)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?logo=react)](https://react.dev/)
+[![Tests](https://img.shields.io/badge/Tests-104%20Passing-brightgreen.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 An enterprise machine-learning system for cold-start demand forecasting of 150 newly introduced retail SKUs over their introductory 8-week lifecycle ($W_1$ through $W_8$) across store clusters and holiday variations.
 
 ```
