@@ -47,6 +47,53 @@ class RequestTrackingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Sliding-window rate limiter protecting heavy compute routes from exhaustion (FL-13)."""
+
+    def __init__(self, app: Any, requests_per_minute: int = 120, heavy_route_rpm: int = 15) -> None:
+        super().__init__(app)
+        self.requests_per_minute = requests_per_minute
+        self.heavy_route_rpm = heavy_route_rpm
+        self._history: dict[str, list[float]] = {}
+        self.heavy_prefixes = ("/api/v1/models/train", "/api/v1/forecasts", "/api/v1/data/import")
+
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
+        # Exempt health checks and options requests
+        if request.method == "OPTIONS" or request.url.path in ("/health", "/ready", "/metrics"):
+            return await call_next(request)  # type: ignore[no-any-return]
+
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        window_start = now - 60.0
+
+        # Check if route is a heavy resource consumer
+        is_heavy = any(request.url.path.startswith(prefix) for prefix in self.heavy_prefixes)
+        limit = self.heavy_route_rpm if is_heavy else self.requests_per_minute
+        key = f"{client_ip}:{'heavy' if is_heavy else 'std'}"
+
+        timestamps = self._history.setdefault(key, [])
+        # Prune entries older than 60 seconds
+        self._history[key] = [t for t in timestamps if t > window_start]
+
+        if len(self._history[key]) >= limit:
+            req_id = getattr(request.state, "request_id", None) or f"req_{uuid.uuid4().hex[:12]}"
+            logger.warning(f"Rate limit exceeded for client {client_ip} on {request.url.path} (Limit: {limit}/min)")
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={"X-Request-ID": req_id, "Retry-After": "60"},
+                content={
+                    "error": {
+                        "code": "RATE_LIMIT_EXCEEDED",
+                        "message": f"Rate limit exceeded. Maximum {limit} requests per minute allowed on this endpoint.",
+                        "request_id": req_id,
+                    }
+                },
+            )
+
+        self._history[key].append(now)
+        return await call_next(request)  # type: ignore[no-any-return]
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register custom exception handlers returning standardized ErrorEnvelope format."""
 

@@ -31,7 +31,9 @@ def normalize_database_url(url: str | None = None, sync: bool = False) -> str:
 
     if sync:
         if raw_url.startswith("postgresql+asyncpg://"):
-            return raw_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+            return raw_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+        if raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+psycopg2://"):
+            return raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
         if raw_url.startswith("sqlite+aiosqlite:///"):
             return raw_url.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
         return raw_url
@@ -58,7 +60,7 @@ def create_async_db_engine(
     kwargs: dict[str, Any] = {"echo": echo}
 
     if "sqlite" in db_url:
-        kwargs["connect_args"] = {"check_same_thread": False}
+        kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30.0}
         if ":memory:" in db_url:
             kwargs["poolclass"] = NullPool
     else:
@@ -81,7 +83,7 @@ def create_sync_db_engine(
     kwargs: dict[str, Any] = {"echo": echo}
 
     if "sqlite" in db_url:
-        kwargs["connect_args"] = {"check_same_thread": False}
+        kwargs["connect_args"] = {"check_same_thread": False, "timeout": 30.0}
         if ":memory:" in db_url:
             kwargs["poolclass"] = NullPool
     else:
@@ -90,7 +92,18 @@ def create_sync_db_engine(
         kwargs["max_overflow"] = max_overflow
         kwargs["pool_pre_ping"] = True
 
-    return create_engine(db_url, **kwargs)
+    eng = create_engine(db_url, **kwargs)
+
+    # Enable WAL mode for SQLite sync connections (FL-14)
+    if "sqlite" in db_url and ":memory:" not in db_url:
+        try:
+            with eng.connect() as conn:
+                conn.exec_driver_sql("PRAGMA journal_mode=WAL")
+                conn.exec_driver_sql("PRAGMA synchronous=NORMAL")
+        except Exception:
+            pass
+
+    return eng
 
 
 # Default process-level engines and session factories

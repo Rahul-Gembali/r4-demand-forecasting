@@ -6,8 +6,13 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import update
 
-from src.api.middleware import RequestTrackingMiddleware, register_exception_handlers
+from src.api.middleware import (
+    RateLimitMiddleware,
+    RequestTrackingMiddleware,
+    register_exception_handlers,
+)
 from src.api.routes import (
     audit,
     data,
@@ -21,6 +26,8 @@ from src.api.routes import (
 )
 from src.core.config import settings
 from src.core.logging import get_logger
+from src.db.models import ForecastRunModel
+from src.db.session import async_session_scope
 
 logger = get_logger("api_main")
 
@@ -32,6 +39,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         f"Initializing R4 Demand Forecasting Backend (Environment: {settings.environment}, "
         f"Horizon: {settings.evaluation_horizon_weeks}w, Target SKUs: {settings.num_evaluation_skus})"
     )
+
+    # FL-11: Recover from ungraceful crashes by transitioning orphaned RUNNING runs to FAILED
+    try:
+        async with async_session_scope() as session:
+            res = await session.execute(
+                update(ForecastRunModel)
+                .where(ForecastRunModel.status == "RUNNING")
+                .values(
+                    status="FAILED",
+                    execution_metadata={"error": "Process terminated unexpectedly; cleaned up on server restart"},
+                )
+            )
+            row_count = getattr(res, "rowcount", None)
+            if row_count and row_count > 0:
+                logger.warning(f"Cleaned up {row_count} zombie RUNNING forecast run(s) on startup.")
+    except Exception as exc:
+        logger.warning(f"Startup zombie cleanup check skipped or encountered error: {exc}")
+
     yield
     logger.info("Shutting down R4 Demand Forecasting Backend.")
 
@@ -61,6 +86,7 @@ def create_application() -> FastAPI:
     # 1. Register Exception Handlers & Request Correlation Middleware
     register_exception_handlers(app)
     app.add_middleware(RequestTrackingMiddleware)
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=300, heavy_route_rpm=50)
 
     # 2. Configure CORS
     origins = [orig.strip() for orig in settings.allowed_origins.split(",") if orig.strip()]

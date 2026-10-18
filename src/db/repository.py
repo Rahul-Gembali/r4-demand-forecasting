@@ -64,11 +64,36 @@ class ForecastRepository:
             return new_sku
 
     async def bulk_upsert_skus(self, skus_data: list[dict[str, Any]]) -> int:
-        """Insert or update multiple SKUs."""
+        """Insert or update multiple SKUs with chunked batch lookup (FL-09: eliminates N+1 queries)."""
+        if not skus_data:
+            return 0
+
+        chunk_size = 500
         count = 0
-        for item in skus_data:
-            await self.upsert_sku(item)
-            count += 1
+        for i in range(0, len(skus_data), chunk_size):
+            chunk = skus_data[i : i + chunk_size]
+            ids = [item["sku_id"] for item in chunk if "sku_id" in item]
+
+            # Single batch SELECT per chunk instead of 1 SELECT per item
+            stmt = select(SKUModel).where(SKUModel.sku_id.in_(ids))
+            res = await self.session.execute(stmt)
+            existing_map = {s.sku_id: s for s in res.scalars()}
+
+            for item in chunk:
+                sku_id = item.get("sku_id")
+                if not sku_id:
+                    continue
+                if sku_id in existing_map:
+                    existing = existing_map[sku_id]
+                    for k, v in item.items():
+                        if hasattr(existing, k) and k != "sku_id":
+                            setattr(existing, k, v)
+                else:
+                    new_sku = SKUModel(**item)
+                    self.session.add(new_sku)
+                    existing_map[sku_id] = new_sku
+                count += 1
+
         await self.session.flush()
         return count
 

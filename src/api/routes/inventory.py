@@ -11,7 +11,7 @@ from src.api.schemas import (
     InventoryOptimizeResponse,
 )
 from src.core.logging import get_logger
-from src.db.models import InventoryRecommendationModel
+from src.db.models import InventoryRecommendationModel, SKUModel, WeeklyForecastModel
 from src.db.repository import ForecastRepository
 from src.db.session import get_db_session
 from src.inventory.constraints import InventoryConstraints
@@ -72,16 +72,42 @@ async def optimize_inventory(
     total_cost = 0.0
     fill_rates = []
 
+    # Batch retrieve true calibrated conformal bounds and SKU master prices (FL-08)
+    sku_ids = [rec.sku_id for rec in base_recs]
+    wf_stmt = select(WeeklyForecastModel).where(
+        WeeklyForecastModel.run_id == payload.run_id,
+        WeeklyForecastModel.sku_id.in_(sku_ids),
+    )
+    wf_rows = (await session.execute(wf_stmt)).scalars().all()
+    wf_bounds_map: dict[str, tuple[float, float]] = {}
+    for w in wf_rows:
+        cur_low, cur_high = wf_bounds_map.get(w.sku_id, (0.0, 0.0))
+        wf_bounds_map[w.sku_id] = (
+            cur_low + float(w.lower_bound_90 or 0.0),
+            cur_high + float(w.upper_bound_90 or 0.0),
+        )
+
+    sku_stmt = select(SKUModel).where(SKUModel.sku_id.in_(sku_ids))
+    skus_rows = (await session.execute(sku_stmt)).scalars().all()
+    sku_price_map = {s.sku_id: float(s.base_price) for s in skus_rows if s.base_price}
+
     for rec in base_recs:
         cu = payload.understock_cost_cu or float(rec.understock_cost_cu)
         co = payload.overstock_cost_co or float(rec.overstock_cost_co)
-        bp = cu / 0.45 if cu > 0 else 50.0
+        bp = sku_price_map.get(rec.sku_id, (cu / 0.45 if cu > 0 else 50.0))
+
+        # Use true cumulative conformal bounds when available (FL-08)
+        if rec.sku_id in wf_bounds_map and wf_bounds_map[rec.sku_id][1] > 0:
+            c_low, c_high = wf_bounds_map[rec.sku_id]
+        else:
+            c_low = float(rec.forecast_cumulative_8w) * 0.75
+            c_high = float(rec.forecast_cumulative_8w) * 1.25
 
         opt_res = optimizer.optimize_sku(
             sku_id=rec.sku_id,
             cumulative_demand_mean=float(rec.forecast_cumulative_8w),
-            cumulative_demand_lower_90=float(rec.forecast_cumulative_8w) * 0.75,
-            cumulative_demand_upper_90=float(rec.forecast_cumulative_8w) * 1.25,
+            cumulative_demand_lower_90=c_low,
+            cumulative_demand_upper_90=c_high,
             base_price=bp,
             scenario=scenario_enum,
             custom_cu=cu,

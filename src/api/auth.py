@@ -8,6 +8,9 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from pydantic import BaseModel
 
 from src.core.config import settings
+from src.core.logging import get_logger
+
+logger = get_logger("api_auth")
 
 
 class Role(StrEnum):
@@ -53,26 +56,32 @@ async def get_current_user(
             headers={"WWW-Authenticate": "ApiKey"},
         )
 
-    # Match token to configured roles
-    if token == settings.api_key_admin:
+    # Match token to configured roles using constant-time comparison (FL-04 & FL-12)
+    import secrets
+
+    if secrets.compare_digest(token, settings.api_key_admin):
+        logger.info(f"Authenticated user as ADMIN via API key prefix: {token[:4]}...")
         return AuthenticatedUser(
             api_key_masked=f"{token[:4]}...{token[-4:]}" if len(token) >= 8 else "***",
             role=Role.ADMIN,
             name="System Administrator",
         )
-    elif token == settings.api_key_operator:
+    elif secrets.compare_digest(token, settings.api_key_operator):
+        logger.info(f"Authenticated user as OPERATOR via API key prefix: {token[:4]}...")
         return AuthenticatedUser(
             api_key_masked=f"{token[:4]}...{token[-4:]}" if len(token) >= 8 else "***",
             role=Role.OPERATOR,
             name="Forecasting Operator",
         )
-    elif token == settings.api_key_viewer:
+    elif secrets.compare_digest(token, settings.api_key_viewer):
+        logger.info(f"Authenticated user as VIEWER via API key prefix: {token[:4]}...")
         return AuthenticatedUser(
             api_key_masked=f"{token[:4]}...{token[-4:]}" if len(token) >= 8 else "***",
             role=Role.VIEWER,
             name="Read-Only Analyst",
         )
 
+    logger.warning("Authentication failure: Invalid API token presented.")
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid API authentication token.",

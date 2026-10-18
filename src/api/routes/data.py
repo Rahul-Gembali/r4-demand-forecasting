@@ -1,5 +1,6 @@
 """Secure Data Ingestion and Import Endpoints."""
 
+import asyncio
 import hashlib
 import os
 import re
@@ -67,10 +68,12 @@ async def import_data(
             detail=f"Unsupported file extension '{file_ext}'. Allowed: {sorted(ALLOWED_EXTENSIONS)}",
         )
 
-    # 2. Destination Directory & Safe File Path
+    # 2. Destination Directory & Safe Unique File Path (FL-05: race collision prevention)
+    import uuid
     settings.data_uploads_dir.mkdir(parents=True, exist_ok=True)
     safe_name = sanitize_filename(file.filename)
-    dest_path = (settings.data_uploads_dir / safe_name).resolve()
+    unique_name = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+    dest_path = (settings.data_uploads_dir / unique_name).resolve()
 
     # Path traversal protection assertion
     if not dest_path.is_relative_to(settings.data_uploads_dir.resolve()):
@@ -99,14 +102,17 @@ async def import_data(
 
     sha_digest = sha256.hexdigest()
 
-    # 4. Parse Uploaded File
-    try:
+    # 4. Parse Uploaded File in worker thread (FL-06: non-blocking DataFrame parsing)
+    def _parse_df() -> pd.DataFrame:
         if file_ext == ".csv":
-            df = pd.read_csv(dest_path)
+            return pd.read_csv(dest_path)
         elif file_ext == ".parquet":
-            df = pd.read_parquet(dest_path)
+            return pd.read_parquet(dest_path)
         else:
-            df = pd.read_excel(dest_path)
+            return pd.read_excel(dest_path)
+
+    try:
+        df = await asyncio.to_thread(_parse_df)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -119,10 +125,11 @@ async def import_data(
 
     repo = ForecastRepository(session)
 
-    # 5. Ingest into SKU Catalogue if columns match
+    # 5. Ingest into SKU Catalogue using fast dictionary records (FL-06)
     if "sku_id" in df.columns:
         sku_records = []
-        for idx, row in df.iterrows():
+        raw_rows = df.to_dict(orient="records")
+        for idx, row in enumerate(raw_rows):
             sku_id = str(row["sku_id"]).strip()
             if not sku_id or pd.isna(row["sku_id"]):
                 warnings.append(f"Row {idx} skipped: missing sku_id.")

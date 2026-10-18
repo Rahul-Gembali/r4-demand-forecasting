@@ -70,7 +70,7 @@ async def background_train_task(job: JobRecord, req_data: dict[str, Any]) -> dic
 
             job.update_progress(60.0)
 
-            # Fit model
+            # Fit model offloaded to worker thread to prevent event loop starvation (FL-01)
             model = CatBoostRegressor(
                 iterations=req_data["iterations"],
                 learning_rate=req_data["learning_rate"],
@@ -80,15 +80,20 @@ async def background_train_task(job: JobRecord, req_data: dict[str, Any]) -> dic
                 loss_function="MAE",
                 verbose=False,
             )
-            model.fit(X, y, cat_features=avail_cats)
+            await asyncio.to_thread(model.fit, X, y, cat_features=avail_cats)
             model.save_model(str(artifact_path))
 
             val_wape = 0.3125
             job.update_progress(85.0)
         except Exception as e:
-            logger.warning(f"CatBoost fitting encountered error: {e}. Writing checkpoint weights.")
-            with open(artifact_path, "w", encoding="utf-8") as f:
-                f.write(f"MODEL_WEIGHTS_CHECKPOINT_{model_id}")
+            # Propagate error so job is marked FAILED and database is not corrupted (FL-03)
+            logger.error(f"CatBoost fitting failed: {e}")
+            if artifact_path.exists():
+                try:
+                    artifact_path.unlink()
+                except OSError:
+                    pass
+            raise RuntimeError(f"CatBoost model training failed: {e}") from e
 
     # Register in database
     async with async_session_scope() as session:
