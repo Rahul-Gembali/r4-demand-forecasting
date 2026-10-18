@@ -1,0 +1,93 @@
+{
+  "evaluation_timestamp": "2026-10-18T13:28:54.919873+00:00",
+  "total_skus": 200,
+  "total_horizon_points": 1600,
+  "overall_wape": 0.25607,
+  "overall_rmse": 35.733,
+  "overall_mae": 27.1659,
+  "overall_bias_pct": -3.2551,
+  "weekly_wape": {
+    "1": 0.252127,
+    "2": 0.249989,
+    "3": 0.280599,
+    "4": 0.250397,
+    "5": 0.258917,
+    "6": 0.24166,
+    "7": 0.260666,
+    "8": 0.251904
+  },
+  "cumulative_8w_wape": 0.103789,
+  "cumulative_8w_rmse": 118.8055,
+  "cumulative_8w_mae": 88.0859,
+  "cumulative_8w_bias_pct": -3.2551,
+  "category_wape": {
+    "Accessories": 0.267195,
+    "Apparel": 0.25419,
+    "Footwear": 0.245583,
+    "Home": 0.260359
+  },
+  "category_stability_std": 0.008,
+  "interval_evaluation": {
+    "coverage_80": {
+      "nominal_confidence": 0.8,
+      "empirical_coverage": 0.8037,
+      "mean_width": 84.0,
+      "winkler_score": 111.92,
+      "coverage_by_week": {
+        "1": 0.78,
+        "2": 0.805,
+        "3": 0.79,
+        "4": 0.8,
+        "5": 0.765,
+        "6": 0.82,
+        "7": 0.825,
+        "8": 0.845
+      },
+      "coverage_by_category": {
+        "Accessories": 0.7969,
+        "Apparel": 0.7961,
+        "Footwear": 0.8317,
+        "Home": 0.7892
+      }
+    },
+    "coverage_90": {
+      "nominal_confidence": 0.9,
+      "empirical_coverage": 0.9075,
+      "mean_width": 106.75,
+      "winkler_score": 129.12,
+      "coverage_by_week": {
+        "1": 0.87,
+        "2": 0.9,
+        "3": 0.925,
+        "4": 0.87,
+        "5": 0.89,
+        "6": 0.955,
+        "7": 0.915,
+        "8": 0.935
+      },
+      "coverage_by_category": {
+        "Accessories": 0.8812,
+        "Apparel": 0.9123,
+        "Footwear": 0.9183,
+        "Home": 0.9118
+      }
+    },
+    "cumulative_coverage_80": {
+      "nominal_confidence": 0.8,
+      "empirical_coverage": 0.71,
+      "mean_width": 226.14,
+      "winkler_score": 406.08
+    },
+    "cumulative_coverage_90": {
+      "nominal_confidence": 0.9,
+      "empirical_coverage": 0.88,
+      "mean_width": 339.34,
+      "winkler_score": 484.59
+    }
+  },
+  "validation_status": "PASSED",
+  "notes": [
+    "Zero denominators handled per specification: returns 0.0 if both sum of actuals and sum of errors are zero.",
+    "Non-negativity strictly validated across all point forecasts and prediction interval lower bounds."
+  ]
+}

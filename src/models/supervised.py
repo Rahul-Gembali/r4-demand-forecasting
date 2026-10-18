@@ -43,6 +43,15 @@ class SKUWeeklyForecast:
     cumulative_8w_forecast: float
     model_version: str
     feature_summary: dict[str, Any]
+    # Prediction intervals
+    weekly_lower_80: list[float] = field(default_factory=list)
+    weekly_upper_80: list[float] = field(default_factory=list)
+    weekly_lower_90: list[float] = field(default_factory=list)
+    weekly_upper_90: list[float] = field(default_factory=list)
+    cumul_lower_80: float = 0.0
+    cumul_upper_80: float = 0.0
+    cumul_lower_90: float = 0.0
+    cumul_upper_90: float = 0.0
 
 
 class SupervisedDatasetBuilder:
@@ -389,18 +398,35 @@ LightGBMForecaster = CatBoostForecaster
 class ColdStartPredictor:
     """Production prediction interface for single SKU attributes and batch evaluations."""
 
-    def __init__(self, forecaster: CatBoostForecaster, model_version: str = "v1.0.0-catboost"):
+    def __init__(
+        self,
+        forecaster: CatBoostForecaster,
+        calibrator: Any = None,
+        model_version: str = "v1.0.0-catboost",
+    ):
         self.forecaster = forecaster
+        self.calibrator = calibrator
         self.model_version = model_version
 
     @classmethod
     def from_artifact(cls, artifact_dir: Path) -> "ColdStartPredictor":
         """Factory initializing predictor from saved disk artifact."""
         forecaster = CatBoostForecaster.load_artifact(artifact_dir)
-        return cls(forecaster=forecaster)
+
+        # Check if calibrated uncertainty configuration is present
+        calibrator = None
+        cal_path = artifact_dir / "uncertainty_config.json"
+        if cal_path.exists():
+            try:
+                from src.evaluation.uncertainty import ConformalIntervalCalibrator
+                calibrator = ConformalIntervalCalibrator.load(cal_path)
+            except Exception as e:
+                logger.warning("Failed to load uncertainty calibrator from %s: %s", cal_path, e)
+
+        return cls(forecaster=forecaster, calibrator=calibrator)
 
     def predict_sku(self, sku_attributes: dict[str, Any]) -> SKUWeeklyForecast:
-        """Generates 8-week nonnegative point forecast for a single new SKU."""
+        """Generates 8-week nonnegative point forecast and optional intervals for a single new SKU."""
         sku_id = str(sku_attributes.get("sku_id", "NEW_SKU"))
         base_price = float(sku_attributes.get("base_price", 49.99))
         launch_date_str = str(sku_attributes.get("launch_date", "2025-11-03"))
@@ -437,11 +463,30 @@ class ColdStartPredictor:
         df_sku = pd.DataFrame(records)
         preds = self.forecaster.predict(df_sku)
         clean_forecast = [max(0.0, round(float(p), 2)) for p in preds]
+        cumul_pred = round(sum(clean_forecast), 2)
+
+        # Compute prediction intervals if calibrator is present
+        w_low_80, w_up_80 = [], []
+        w_low_90, w_up_90 = [], []
+        c_low_80, c_up_80 = 0.0, 0.0
+        c_low_90, c_up_90 = 0.0, 0.0
+
+        if self.calibrator is not None and getattr(self.calibrator, "is_calibrated", False):
+            np_preds = np.array(clean_forecast)
+            l80, u80 = self.calibrator.predict_weekly_intervals(np_preds, confidence_level=0.80)
+            l90, u90 = self.calibrator.predict_weekly_intervals(np_preds, confidence_level=0.90)
+            w_low_80, w_up_80 = l80.tolist(), u80.tolist()
+            w_low_90, w_up_90 = l90.tolist(), u90.tolist()
+
+            cl80, cu80 = self.calibrator.predict_cumulative_intervals(np.array([cumul_pred]), confidence_level=0.80)
+            cl90, cu90 = self.calibrator.predict_cumulative_intervals(np.array([cumul_pred]), confidence_level=0.90)
+            c_low_80, c_up_80 = float(cl80[0]), float(cu80[0])
+            c_low_90, c_up_90 = float(cl90[0]), float(cu90[0])
 
         return SKUWeeklyForecast(
             sku_id=sku_id,
             weekly_forecast=clean_forecast,
-            cumulative_8w_forecast=round(sum(clean_forecast), 2),
+            cumulative_8w_forecast=cumul_pred,
             model_version=self.model_version,
             feature_summary={
                 "category": sku_attributes.get("category"),
@@ -449,23 +494,65 @@ class ColdStartPredictor:
                 "base_price": base_price,
                 "brand_tier": sku_attributes.get("brand_tier"),
             },
+            weekly_lower_80=w_low_80,
+            weekly_upper_80=w_up_80,
+            weekly_lower_90=w_low_90,
+            weekly_upper_90=w_up_90,
+            cumul_lower_80=c_low_80,
+            cumul_upper_80=c_up_80,
+            cumul_lower_90=c_low_90,
+            cumul_upper_90=c_up_90,
         )
 
-    def predict_batch(self, df_target_features: pd.DataFrame) -> pd.DataFrame:
+    def predict_batch(
+        self,
+        df_target_features: pd.DataFrame,
+        include_intervals: bool = False,
+    ) -> pd.DataFrame:
         """Batch predicts for 150 evaluation SKUs across weeks 1 to 8.
 
         Returns standard long-form dataframe:
-        ['sku_id', 'horizon_week', 'predicted_sales']
+        ['sku_id', 'horizon_week', 'predicted_sales', ...]
         """
         df_in = df_target_features.copy()
         preds = self.forecaster.predict(df_in)
+        preds_clean = np.maximum(0.0, np.round(preds, 2))
 
         df_out = pd.DataFrame({
             "sku_id": df_in["sku_id"].astype(str),
             "horizon_week": df_in["launch_week_age"].astype(int),
-            "predicted_sales": np.maximum(0.0, np.round(preds, 2)),
+            "predicted_sales": preds_clean,
         })
-        # Validate output shape
+
+        if include_intervals and self.calibrator is not None and getattr(self.calibrator, "is_calibrated", False):
+            l80, u80 = self.calibrator.predict_weekly_intervals(preds_clean, confidence_level=0.80)
+            l90, u90 = self.calibrator.predict_weekly_intervals(preds_clean, confidence_level=0.90)
+            df_out["lower_bound_80"] = l80
+            df_out["upper_bound_80"] = u80
+            df_out["lower_bound_90"] = l90
+            df_out["upper_bound_90"] = u90
+
+            # SKU-level cumulative predictions and bounds
+            sku_cum_map = df_out.groupby("sku_id")["predicted_sales"].sum().to_dict()
+            df_out["cumul_pred_8w"] = df_out["sku_id"].map(sku_cum_map)
+
+            unique_skus = df_out["sku_id"].drop_duplicates()
+            unique_cums = np.array([sku_cum_map[s] for s in unique_skus])
+
+            cl80, cu80 = self.calibrator.predict_cumulative_intervals(unique_cums, confidence_level=0.80)
+            cl90, cu90 = self.calibrator.predict_cumulative_intervals(unique_cums, confidence_level=0.90)
+
+            map_cl80 = dict(zip(unique_skus, cl80))
+            map_cu80 = dict(zip(unique_skus, cu80))
+            map_cl90 = dict(zip(unique_skus, cl90))
+            map_cu90 = dict(zip(unique_skus, cu90))
+
+            df_out["cumul_lower_80"] = df_out["sku_id"].map(map_cl80)
+            df_out["cumul_upper_80"] = df_out["sku_id"].map(map_cu80)
+            df_out["cumul_lower_90"] = df_out["sku_id"].map(map_cl90)
+            df_out["cumul_upper_90"] = df_out["sku_id"].map(map_cu90)
+
+        # Validate output shape and non-negativity
         if len(df_out) != len(df_in):
             raise ValueError(f"Output shape mismatch: {len(df_out)} vs {len(df_in)}")
         if (df_out["predicted_sales"] < 0).any():
