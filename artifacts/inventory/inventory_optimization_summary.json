@@ -1,0 +1,85 @@
+{
+  "generated_at": "2026-10-18T13:35:01.018411+00:00",
+  "total_skus": 150,
+  "total_8w_forecast_demand": 112469.0,
+  "total_buy_quantity_base": 117162,
+  "total_buy_quantity_conservative": 107904,
+  "total_buy_quantity_aggressive": 123216,
+  "total_expected_cost_base": 474664.2,
+  "mean_fill_rate_base": 96.69,
+  "scenarios_evaluated": [
+    "CONSERVATIVE",
+    "BASE",
+    "AGGRESSIVE"
+  ],
+  "operational_constraints": {
+    "min_order_quantity": 24,
+    "case_pack_size": 6
+  },
+  "sample_sensitivity_sku": "SKU_EVAL_001",
+  "sample_sensitivity_table": [
+    {
+      "critical_ratio": 0.25,
+      "buy_quantity": 455,
+      "safety_stock_units": -46,
+      "expected_shortage_units": 56.47,
+      "expected_excess_units": 10.07,
+      "expected_fill_rate_pct": 88.74,
+      "expected_total_cost": 1058.02
+    },
+    {
+      "critical_ratio": 0.35,
+      "buy_quantity": 475,
+      "safety_stock_units": -26,
+      "expected_shortage_units": 42.42,
+      "expected_excess_units": 16.02,
+      "expected_fill_rate_pct": 91.54,
+      "expected_total_cost": 1422.93
+    },
+    {
+      "critical_ratio": 0.5,
+      "buy_quantity": 501,
+      "safety_stock_units": 0,
+      "expected_shortage_units": 27.41,
+      "expected_excess_units": 27.01,
+      "expected_fill_rate_pct": 94.53,
+      "expected_total_cost": 1992.39
+    },
+    {
+      "critical_ratio": 0.6,
+      "buy_quantity": 519,
+      "safety_stock_units": 17,
+      "expected_shortage_units": 19.31,
+      "expected_excess_units": 36.91,
+      "expected_fill_rate_pct": 96.15,
+      "expected_total_cost": 2411.82
+    },
+    {
+      "critical_ratio": 0.7,
+      "buy_quantity": 537,
+      "safety_stock_units": 35,
+      "expected_shortage_units": 13.04,
+      "expected_excess_units": 48.64,
+      "expected_fill_rate_pct": 97.4,
+      "expected_total_cost": 2894.03
+    },
+    {
+      "critical_ratio": 0.8,
+      "buy_quantity": 559,
+      "safety_stock_units": 57,
+      "expected_shortage_units": 7.58,
+      "expected_excess_units": 65.18,
+      "expected_fill_rate_pct": 98.49,
+      "expected_total_cost": 3495.41
+    },
+    {
+      "critical_ratio": 0.85,
+      "buy_quantity": 572,
+      "safety_stock_units": 70,
+      "expected_shortage_units": 5.31,
+      "expected_excess_units": 75.91,
+      "expected_fill_rate_pct": 98.94,
+      "expected_total_cost": 3881.39
+    }
+  ]
+}
