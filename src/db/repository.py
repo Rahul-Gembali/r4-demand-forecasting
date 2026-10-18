@@ -417,15 +417,17 @@ class ForecastRepository:
         )
         forecasts = list((await self.session.execute(fc_stmt)).scalars().all())
 
-        # Inventory recommendation
+        # Inventory recommendation (take latest scenario)
         rec_stmt = (
             select(InventoryRecommendationModel)
             .where(
                 InventoryRecommendationModel.run_id == run_id,
                 InventoryRecommendationModel.sku_id == sku_id,
             )
+            .order_by(InventoryRecommendationModel.created_at.desc())
+            .limit(1)
         )
-        rec = (await self.session.execute(rec_stmt)).scalar_one_or_none()
+        rec = (await self.session.execute(rec_stmt)).scalars().first()
 
         # Analogues
         an_stmt = (
@@ -563,3 +565,102 @@ class ForecastRepository:
             "average_confidence_score": float(rec_row.avg_confidence_score or 0.0),
             "average_fill_rate_pct": float(rec_row.avg_fill_rate_pct or 0.0),
         }
+
+    async def list_sku_forecasts(
+        self,
+        run_id: str,
+        category: str | None = None,
+        search: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """List SKU-level forecast summaries for a given run with optional filtering."""
+        base_sku_subq = (
+            select(WeeklyForecastModel.sku_id)
+            .where(WeeklyForecastModel.run_id == run_id)
+            .distinct()
+        )
+
+        query = select(SKUModel).where(SKUModel.sku_id.in_(base_sku_subq))
+        count_query = select(func.count(SKUModel.sku_id)).where(SKUModel.sku_id.in_(base_sku_subq))
+
+        if category and category != "ALL":
+            query = query.where(SKUModel.category == category)
+            count_query = count_query.where(SKUModel.category == category)
+
+        if search and search.strip():
+            pat = f"%{search.strip()}%"
+            query = query.where(
+                (SKUModel.sku_id.ilike(pat))
+                | (SKUModel.product_name.ilike(pat))
+                | (SKUModel.subcategory.ilike(pat))
+            )
+            count_query = count_query.where(
+                (SKUModel.sku_id.ilike(pat))
+                | (SKUModel.product_name.ilike(pat))
+                | (SKUModel.subcategory.ilike(pat))
+            )
+
+        total = (await self.session.execute(count_query)).scalar_one()
+
+        skus = list(
+            (
+                await self.session.execute(
+                    query.order_by(SKUModel.sku_id.asc()).limit(limit).offset(offset)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        results = []
+        for sku in skus:
+            # Weekly forecast values
+            fc_stmt = (
+                select(WeeklyForecastModel)
+                .where(
+                    WeeklyForecastModel.run_id == run_id,
+                    WeeklyForecastModel.sku_id == sku.sku_id,
+                )
+                .order_by(WeeklyForecastModel.horizon_week)
+            )
+            fcs = list((await self.session.execute(fc_stmt)).scalars().all())
+            weekly_vals = [float(f.predicted_sales) for f in fcs]
+            total_sales = sum(weekly_vals)
+
+            # Latest inventory recommendation
+            rec_stmt = (
+                select(InventoryRecommendationModel)
+                .where(
+                    InventoryRecommendationModel.run_id == run_id,
+                    InventoryRecommendationModel.sku_id == sku.sku_id,
+                )
+                .order_by(InventoryRecommendationModel.created_at.desc())
+                .limit(1)
+            )
+            rec = (await self.session.execute(rec_stmt)).scalars().first()
+
+            results.append(
+                {
+                    "sku_id": sku.sku_id,
+                    "product_name": sku.product_name,
+                    "category": sku.category,
+                    "subcategory": sku.subcategory,
+                    "colour": sku.colour,
+                    "material": sku.material,
+                    "base_price": float(sku.base_price),
+                    "brand_tier": sku.brand_tier,
+                    "launch_date": sku.launch_date.isoformat(),
+                    "has_marketing_support": sku.has_marketing_support,
+                    "is_evaluation_sku": sku.is_evaluation_sku,
+                    "total_projected_sales": round(total_sales, 1),
+                    "recommended_buy_quantity": rec.recommended_buy_quantity if rec else int(round(total_sales)),
+                    "confidence_score": float(rec.confidence_score) if rec and rec.confidence_score is not None else None,
+                    "confidence_tier": rec.confidence_tier if rec else "MEDIUM",
+                    "expected_total_cost": float(rec.expected_total_cost) if rec and rec.expected_total_cost is not None else 0.0,
+                    "expected_fill_rate_pct": float(rec.expected_fill_rate_pct) if rec and rec.expected_fill_rate_pct is not None else 85.0,
+                    "weekly_forecasts": weekly_vals,
+                }
+            )
+
+        return results, total

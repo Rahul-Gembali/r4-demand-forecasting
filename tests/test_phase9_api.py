@@ -400,6 +400,23 @@ def test_create_forecast_run_duplicate_blocked(api_client: TestClient):
 # 7. SKU DETAIL FORECASTS & CONFIDENCE RANKING
 # =============================================================================
 
+def test_list_sku_forecasts_with_pagination(api_client: TestClient):
+    """Test GET /api/v1/forecasts/{run_id}/skus returns paginated list of forecast summaries."""
+    res = api_client.get(
+        "/api/v1/forecasts/RUN_EVAL_150_V1/skus?limit=10&offset=0", headers=VIEWER_HEADERS
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["run_id"] == "RUN_EVAL_150_V1"
+    assert data["total"] >= 1
+    assert len(data["items"]) >= 1
+    sample = data["items"][0]
+    assert "sku_id" in sample
+    assert "total_projected_sales" in sample
+    assert "weekly_forecasts" in sample
+    assert len(sample["weekly_forecasts"]) == 8
+
+
 def test_get_sku_forecast_detail(api_client: TestClient):
     """Test GET /api/v1/forecasts/{run_id}/skus/{sku_id} returns full prediction package."""
     res = api_client.get(

@@ -173,6 +173,36 @@ class SKUForecastDetailResponse(BaseModel):
     analogues: list[AnalogueMatchDetail] = Field(default_factory=list)
 
 
+class SKUForecastListItem(BaseModel):
+    """Summary item for SKU table in forecasting dashboard."""
+    sku_id: str
+    product_name: str
+    category: str
+    subcategory: str
+    colour: str | None = None
+    material: str | None = None
+    base_price: float
+    brand_tier: str | None = None
+    launch_date: str
+    has_marketing_support: bool
+    is_evaluation_sku: bool
+    total_projected_sales: float
+    recommended_buy_quantity: int
+    confidence_score: float | None = None
+    confidence_tier: str | None = "MEDIUM"
+    expected_total_cost: float | None = 0.0
+    expected_fill_rate_pct: float | None = 85.0
+    weekly_forecasts: list[float] = Field(default_factory=list)
+
+
+class SKUForecastListResponse(BaseModel):
+    """Paginated list of SKU forecast summaries."""
+    run_id: str
+    total: int
+    items: list[SKUForecastListItem]
+
+
+
 # =============================================================================
 # CONFIDENCE RANKING SCHEMAS
 # =============================================================================

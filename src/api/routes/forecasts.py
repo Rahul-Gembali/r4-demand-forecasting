@@ -21,6 +21,8 @@ from src.api.schemas import (
     LowConfidenceResponse,
     LowConfidenceSKUItem,
     SKUForecastDetailResponse,
+    SKUForecastListItem,
+    SKUForecastListResponse,
 )
 from src.core.logging import get_logger
 from src.db.models import ForecastRunModel, InventoryRecommendationModel, ModelVersionModel, SKUModel
@@ -306,6 +308,36 @@ async def get_forecast_run(
         total_expected_cost=summary.get("total_expected_cost", 0.0),
         average_confidence_score=summary.get("average_confidence_score", 0.0),
         average_fill_rate_pct=summary.get("average_fill_rate_pct", 0.0),
+    )
+
+
+@router.get(
+    "/{run_id}/skus",
+    response_model=SKUForecastListResponse,
+    summary="List SKU Forecasts with Filtering and Pagination",
+)
+async def list_sku_forecasts(
+    run_id: str,
+    category: str | None = Query(default=None, description="Filter by category"),
+    search: str | None = Query(default=None, description="Search SKU ID, name, or subcategory"),
+    limit: int = Query(default=50, ge=1, le=200, description="Items per page"),
+    offset: int = Query(default=0, ge=0, description="Pagination offset"),
+    current_user: AuthenticatedUser = Depends(require_viewer),
+    session: AsyncSession = Depends(get_db_session),
+) -> SKUForecastListResponse:
+    """Retrieve paginated list of SKU-level demand predictions for a completed run."""
+    repo = ForecastRepository(session)
+    items, total = await repo.list_sku_forecasts(
+        run_id=run_id,
+        category=category,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
+    return SKUForecastListResponse(
+        run_id=run_id,
+        total=total,
+        items=[SKUForecastListItem(**item) for item in items],
     )
 
 

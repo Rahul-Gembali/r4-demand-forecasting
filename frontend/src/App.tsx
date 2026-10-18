@@ -1,127 +1,190 @@
-import React, { useState, useEffect } from "react";
-
-interface AuditSummary {
-  directory_path?: string;
-  total_files_scanned?: number;
-  blockers?: string[];
-  summary_findings?: {
-    total_files?: number;
-    total_rows?: number;
-  };
-}
+import { useState, useEffect, useCallback } from "react";
+import {
+  ForecastRunResponse,
+  ModelVersionItem,
+  ReportSummaryResponse,
+} from "./types/api";
+import { apiClient } from "./services/api";
+import { Navigation, ScreenId } from "./components/Navigation";
+import { OverviewScreen } from "./screens/OverviewScreen";
+import { SKUForecastingScreen } from "./screens/SKUForecastingScreen";
+import { SKUDetailsScreen } from "./screens/SKUDetailsScreen";
+import { InventoryScreen } from "./screens/InventoryScreen";
+import { LowConfidenceScreen } from "./screens/LowConfidenceScreen";
+import { EvaluationScreen } from "./screens/EvaluationScreen";
+import { DataQualityScreen } from "./screens/DataQualityScreen";
 
 export default function App() {
-  const [auditData, setAuditData] = useState<AuditSummary | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [healthStatus, setHealthStatus] = useState<string>("Checking...");
+  const [activeScreen, setActiveScreen] = useState<ScreenId>("overview");
+  const [selectedSKUId, setSelectedSKUId] = useState<string | null>("SKU_EVAL_001");
+  const [runId] = useState<string>("RUN_EVAL_150_V1");
+
+  // Global State
+  const [runSummary, setRunSummary] = useState<ForecastRunResponse | null>(null);
+  const [report, setReport] = useState<ReportSummaryResponse | null>(null);
+  const [models, setModels] = useState<ModelVersionItem[]>([]);
+  const [isBackendHealthy, setIsBackendHealthy] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const fetchGlobalData = useCallback(async () => {
+    try {
+      // 1. Health check
+      try {
+        await apiClient.checkHealth();
+        setIsBackendHealthy(true);
+      } catch {
+        setIsBackendHealthy(false);
+      }
+
+      // 2. Load run summary, models, and report in parallel
+      const [summaryRes, reportRes, modelsRes] = await Promise.allSettled([
+        apiClient.getForecastRun(runId),
+        apiClient.getReport(runId),
+        apiClient.getModels(),
+      ]);
+
+      if (summaryRes.status === "fulfilled") {
+        setRunSummary(summaryRes.value);
+      }
+      if (reportRes.status === "fulfilled") {
+        setReport(reportRes.value);
+      }
+      if (modelsRes.status === "fulfilled") {
+        setModels(modelsRes.value);
+      }
+    } catch (err) {
+      console.error("Error loading application state:", err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [runId]);
 
   useEffect(() => {
-    // Probe backend health
-    fetch("/api/v1/health")
-      .then((res) => res.json())
-      .then((data) => setHealthStatus(data.status))
-      .catch(() => setHealthStatus("Offline (Backend starting)"));
+    fetchGlobalData();
+  }, [fetchGlobalData]);
 
-    // Probe data audit status
-    fetch("/api/v1/audit/status")
-      .then((res) => res.json())
-      .then((data) => {
-        setAuditData(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Audit fetch error", err);
-        setLoading(false);
-      });
-  }, []);
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchGlobalData();
+  };
+
+  const handleSelectSKU = (skuId: string) => {
+    setSelectedSKUId(skuId);
+    setActiveScreen("details");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#0B0F17", padding: "2rem" }}>
-      {/* Header */}
-      <header style={{ borderBottom: "1px solid #1E293B", paddingBottom: "1.5rem", marginBottom: "2rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <span style={{ fontSize: "0.8rem", color: "#6366F1", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
-              Phase 1 — Project Initialization & Discovery
-            </span>
-            <h1 style={{ fontSize: "1.75rem", margin: "0.25rem 0 0 0", color: "#F8FAFC" }}>
-              R4 New Product Demand Forecasting
-            </h1>
-            <p style={{ margin: "0.25rem 0 0 0", color: "#94A3B8", fontSize: "0.95rem" }}>
-              Cold-start 8-week horizon forecasting for 150 new retail SKUs across store clusters.
-            </p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", background: "#1E293B", padding: "0.4rem 0.8rem", borderRadius: "9999px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: healthStatus === "healthy" ? "#10B981" : "#F59E0B" }}></span>
-              <span style={{ fontSize: "0.85rem", color: "#CBD5E1" }}>Backend: {healthStatus}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#0B0F17",
+        color: "#F8FAFC",
+        fontFamily: "'Geist', -apple-system, BlinkMacSystemFont, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Persistent Navigation Header */}
+      <Navigation
+        activeScreen={activeScreen}
+        onScreenChange={(screen) => {
+          setActiveScreen(screen);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        selectedSKUId={selectedSKUId}
+        runId={runId}
+        isBackendHealthy={isBackendHealthy}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
 
-      {/* Main Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.5rem" }}>
-        {/* Card: Target Constraints */}
-        <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: "12px", padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "#E2E8F0", marginTop: 0 }}>Target Evaluation Specs</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #1F2937", paddingBottom: "0.5rem" }}>
-              <span style={{ color: "#94A3B8" }}>Evaluation SKUs:</span>
-              <strong style={{ color: "#F8FAFC" }}>150 New Products (Cold-Start)</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #1F2937", paddingBottom: "0.5rem" }}>
-              <span style={{ color: "#94A3B8" }}>Forecast Horizon:</span>
-              <strong style={{ color: "#F8FAFC" }}>First 8 Weeks (W1 - W8)</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #1F2937", paddingBottom: "0.5rem" }}>
-              <span style={{ color: "#94A3B8" }}>Historical Donors:</span>
-              <strong style={{ color: "#F8FAFC" }}>~1,200 Mature SKUs</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid #1F2937", paddingBottom: "0.5rem" }}>
-              <span style={{ color: "#94A3B8" }}>Primary Metric:</span>
-              <strong style={{ color: "#10B981" }}>WAPE (Weighted Abs % Error)</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "#94A3B8" }}>Secondary Metrics:</span>
-              <strong style={{ color: "#38BDF8" }}>RMSE, MAE, Bias %</strong>
-            </div>
-          </div>
-        </div>
+      {/* Main Content Area */}
+      <main style={{ flex: 1, padding: "1.75rem", maxWidth: "1400px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        {activeScreen === "overview" && (
+          <OverviewScreen
+            runSummary={runSummary}
+            report={report}
+            models={models}
+            onNavigate={(screen) => {
+              setActiveScreen(screen);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            isLoading={isLoading}
+          />
+        )}
 
-        {/* Card: Phase 1 Blocker Registry */}
-        <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: "12px", padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "#F87171", marginTop: 0 }}>Phase 1 Blocker Registry</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            <div style={{ background: "#450A0A", border: "1px solid #7F1D1D", padding: "0.75rem", borderRadius: "8px" }}>
-              <div style={{ fontWeight: 700, color: "#FECACA", fontSize: "0.85rem" }}>BLK-001: Raw Dataset Pending Ingestion</div>
-              <p style={{ margin: "0.25rem 0 0 0", color: "#FCA5A5", fontSize: "0.8rem" }}>
-                Zero CSV/Parquet files found in <code>data/raw/</code>. Awaiting source data placement.
-              </p>
-            </div>
-            <div style={{ background: "#450A0A", border: "1px solid #7F1D1D", padding: "0.75rem", borderRadius: "8px" }}>
-              <div style={{ fontWeight: 700, color: "#FECACA", fontSize: "0.85rem" }}>BLK-002: Official evaluate.py Pending</div>
-              <p style={{ margin: "0.25rem 0 0 0", color: "#FCA5A5", fontSize: "0.8rem" }}>
-                Official evaluator missing. Using formal mathematical specification in <code>docs/EVALUATION_SPEC.md</code>.
-              </p>
-            </div>
-          </div>
-        </div>
+        {activeScreen === "forecasting" && (
+          <SKUForecastingScreen
+            runId={runId}
+            onSelectSKU={handleSelectSKU}
+          />
+        )}
 
-        {/* Card: Data Ingestion & Verification */}
-        <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: "12px", padding: "1.5rem" }}>
-          <h2 style={{ fontSize: "1.1rem", color: "#E2E8F0", marginTop: 0 }}>Automated Inspection Tool</h2>
-          <p style={{ color: "#94A3B8", fontSize: "0.85rem", lineHeight: "1.5" }}>
-            Once raw files are dropped into <code>data/raw/</code>, execute the discovery pipeline to validate schemas without manual assumptions:
-          </p>
-          <div style={{ background: "#030712", padding: "0.75rem", borderRadius: "6px", border: "1px solid #1E293B", fontFamily: "monospace", fontSize: "0.8rem", color: "#38BDF8" }}>
-            python scripts/inspect_data.py --data-dir data/raw
-          </div>
-          <div style={{ marginTop: "1rem", fontSize: "0.8rem", color: "#64748B" }}>
-            Audit Output: <code>docs/data_audit_results.json</code>
-          </div>
+        {activeScreen === "details" && (
+          <SKUDetailsScreen
+            runId={runId}
+            skuId={selectedSKUId}
+            onBack={() => setActiveScreen("forecasting")}
+            onSelectDifferentSKU={handleSelectSKU}
+          />
+        )}
+
+        {activeScreen === "inventory" && (
+          <InventoryScreen
+            runId={runId}
+            runSummary={runSummary}
+            onRefresh={handleRefresh}
+          />
+        )}
+
+        {activeScreen === "low_confidence" && (
+          <LowConfidenceScreen
+            runId={runId}
+            onSelectSKU={handleSelectSKU}
+          />
+        )}
+
+        {activeScreen === "evaluation" && (
+          <EvaluationScreen
+            report={report}
+            isLoading={isLoading}
+          />
+        )}
+
+        {activeScreen === "data_quality" && (
+          <DataQualityScreen report={report} />
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer
+        style={{
+          borderTop: "1px solid #1E293B",
+          padding: "1rem 1.75rem",
+          background: "#080C14",
+          color: "#64748B",
+          fontSize: "0.78rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+        }}
+      >
+        <div>
+          <span>R4 New Product Demand Forecasting Platform • Enterprise Production Release v0.9.0</span>
         </div>
-      </div>
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <span>CatBoost GBDT Cold-Start Engine</span>
+          <span>•</span>
+          <span>Conformal Split-Quantile Calibration</span>
+          <span>•</span>
+          <span>Single-Period Newsvendor Optimizer</span>
+        </div>
+      </footer>
     </div>
   );
 }
